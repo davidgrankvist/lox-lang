@@ -77,34 +77,6 @@ internal class Parser
         }
     }
 
-    private void Sync()
-    {
-        Advance();
-
-        while (!IsDone())
-        {
-            if (Previous().Type == TokenType.Semicolon)
-            {
-                return;
-            }
-
-            switch (Peek().Type)
-            {
-                case TokenType.Class:
-                case TokenType.Fun:
-                case TokenType.Var:
-                case TokenType.For:
-                case TokenType.If:
-                case TokenType.While:
-                case TokenType.Print:
-                case TokenType.Return:
-                    return;
-            }
-
-            Advance();
-        }
-    }
-
     private Stmt ParseVarDeclaration()
     {
         Consume(TokenType.Identifier, "Expected identifier");
@@ -125,23 +97,54 @@ internal class Parser
     {
         if (Match(TokenType.Print))
         {
-            var expr = ParseExpression();
-            Consume(TokenType.Semicolon, "Expected ';'");
-            return new Stmt.PrintStmt(expr);
+            return ParsePrint();
         }
 
         if (Match(TokenType.CurlyStart))
         {
-            var stmts = new List<Stmt>();
-            while (!IsDone() && Peek().Type != TokenType.CurlyEnd)
-            {
-                stmts.Add(ParseDeclaration());
-            }
-            Consume(TokenType.CurlyEnd, "Expected '}'");
-            return new Stmt.BlockStmt(stmts);
+            return ParseBlock();
+        }
+
+        if (Match(TokenType.If))
+        {
+            return ParseIf();
         }
 
         return ParseExpressionStatement();
+    }
+
+    private Stmt ParseIf()
+    {
+        Consume(TokenType.ParenStart, "Expected '('");
+        var condition = ParseExpression();
+        Consume(TokenType.ParenEnd, "Expected ')'");
+        var ifStmt = ParseStatement();
+
+        Stmt elseStmt = null;
+        if (Match(TokenType.Else))
+        {
+            elseStmt = ParseStatement();
+        }
+
+        return new Stmt.IfStmt(condition, ifStmt, elseStmt);
+    }
+
+    private Stmt ParsePrint()
+    {
+        var expr = ParseExpression();
+        Consume(TokenType.Semicolon, "Expected ';'");
+        return new Stmt.PrintStmt(expr);
+    }
+
+    private Stmt ParseBlock()
+    {
+        var stmts = new List<Stmt>();
+        while (!IsDone() && Peek().Type != TokenType.CurlyEnd)
+        {
+            stmts.Add(ParseDeclaration());
+        }
+        Consume(TokenType.CurlyEnd, "Expected '}'");
+        return new Stmt.BlockStmt(stmts);
     }
 
     private Stmt ParseExpressionStatement()
@@ -160,7 +163,7 @@ internal class Parser
 
     private Expr ParseAssignment()
     {
-        var expr = ParseEquality();
+        var expr = ParseLogicOr();
 
         if (Match(TokenType.Equal))
         {
@@ -173,6 +176,34 @@ internal class Parser
             }
 
             throw ReportAndCreateError(equals, "Invalid assignment target");
+        }
+
+        return expr;
+    }
+
+    private Expr ParseLogicOr()
+    {
+        var expr = ParseLogicAnd();
+
+        while (Match(TokenType.Or))
+        {
+            var op = Previous();
+            var right = ParseLogicAnd();
+            expr = new Expr.LogicalExpr(expr, op, right);
+        }
+
+        return expr;
+    }
+
+    private Expr ParseLogicAnd()
+    {
+        var expr = ParseEquality();
+
+        while (Match(TokenType.And))
+        {
+            var op = Previous();
+            var right = ParseEquality();
+            expr = new Expr.LogicalExpr(expr, op, right);
         }
 
         return expr;
@@ -334,6 +365,34 @@ internal class Parser
         }
 
         throw ReportAndCreateError(Peek(), message);
+    }
+
+    private void Sync()
+    {
+        Advance();
+
+        while (!IsDone())
+        {
+            if (Previous().Type == TokenType.Semicolon)
+            {
+                return;
+            }
+
+            switch (Peek().Type)
+            {
+                case TokenType.Class:
+                case TokenType.Fun:
+                case TokenType.Var:
+                case TokenType.For:
+                case TokenType.If:
+                case TokenType.While:
+                case TokenType.Print:
+                case TokenType.Return:
+                    return;
+            }
+
+            Advance();
+        }
     }
 
     private ParseError ReportAndCreateError(Token token, string message)

@@ -14,6 +14,7 @@ public abstract class Stmt
         TResult VisitPrintStmt(PrintStmt stmt);
         TResult VisitDeclarationStmt(DeclarationStmt stmt);
         TResult VisitBlockStmt(BlockStmt stmt);
+        TResult VisitIfStmt(IfStmt stmt);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -88,6 +89,24 @@ public abstract class Stmt
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitBlockStmt(this);
+        }
+    }
+    public class IfStmt : Stmt
+    {
+        public IfStmt(Expr Condtition, Stmt IfSt, Stmt ElseSt)
+        {
+            this.Condtition = Condtition;
+            this.IfSt = IfSt;
+            this.ElseSt = ElseSt;
+        }
+
+        public readonly Expr Condtition;
+        public readonly Stmt IfSt;
+        public readonly Stmt ElseSt;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitIfStmt(this);
         }
     }
 

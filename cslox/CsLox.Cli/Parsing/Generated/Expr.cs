@@ -15,6 +15,7 @@ public abstract class Expr
         TResult VisitBinaryExpr(BinaryExpr expr);
         TResult VisitVariableExpr(VariableExpr expr);
         TResult VisitAssignmentExpr(AssignmentExpr expr);
+        TResult VisitLogicalExpr(LogicalExpr expr);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -109,6 +110,24 @@ public abstract class Expr
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitAssignmentExpr(this);
+        }
+    }
+    public class LogicalExpr : Expr
+    {
+        public LogicalExpr(Expr Left, Token Operator, Expr Right)
+        {
+            this.Left = Left;
+            this.Operator = Operator;
+            this.Right = Right;
+        }
+
+        public readonly Expr Left;
+        public readonly Token Operator;
+        public readonly Expr Right;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitLogicalExpr(this);
         }
     }
 

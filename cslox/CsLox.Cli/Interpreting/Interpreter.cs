@@ -197,6 +197,47 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         return null;
     }
 
+    public object VisitIfStmt(Stmt.IfStmt stmt)
+    {
+        var c = VisitExpr(stmt.Condtition);
+        if (IsTruthy(c))
+        {
+            VisitStmt(stmt.IfSt);
+        }
+        else if (stmt.ElseSt != null)
+        {
+            VisitStmt(stmt.ElseSt);
+        }
+
+        return null;
+    }
+
+    public object VisitLogicalExpr(Expr.LogicalExpr expr)
+    {
+        object result = null;
+
+        var left = VisitExpr(expr.Left);
+        var op = expr.Operator;
+
+        if (op.Type == TokenType.Or)
+        {
+            if (IsTruthy(left))
+            {
+                return left;
+            }
+        }
+        else
+        {
+            if (!IsTruthy(left))
+            {
+                return left;
+            }
+        }
+
+        var right = VisitExpr(expr.Right);
+        return right;
+    }
+
     private void AssertIsNumberOperand(Token op, object operand)
     {
         if (operand is double)
@@ -256,6 +297,10 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         else if (a is double d)
         {
             return d.ToString(CultureInfo.InvariantCulture);
+        }
+        else if (a is bool b)
+        {
+            return b.ToString().ToLower();
         }
         else 
         {

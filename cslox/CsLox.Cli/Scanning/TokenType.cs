@@ -35,6 +35,7 @@ public enum TokenType
     // keywords - control flow
     For,
     If,
+    Else,
     While,
     Return,
     // special

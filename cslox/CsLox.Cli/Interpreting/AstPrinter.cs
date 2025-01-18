@@ -21,6 +21,11 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
         Console.Write(s);
     }
 
+    private string Parens(string s)
+    {
+        return "(" + s + ")";
+    }
+
     public string VisitBinaryExpr(Expr.BinaryExpr expr)
     {
         var left = VisitExpr(expr.Left);
@@ -96,8 +101,29 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
         return Parens(result);
     }
 
-    private string Parens(string s)
+    public string VisitIfStmt(Stmt.IfStmt stmt)
     {
-        return "(" + s + ")";
+        var result = "";
+
+        var cs = Parens(VisitExpr(stmt.Condtition));
+        var sts = VisitStmt(stmt.IfSt);
+        var ifs = "if " + cs + " " + sts;
+        result += ifs;
+
+        if (stmt.ElseSt != null)
+        {
+            var els = " else " + VisitStmt(stmt.ElseSt);
+            result += els;
+        }
+
+        return Parens(result);
+    }
+
+    public string VisitLogicalExpr(Expr.LogicalExpr expr)
+    {
+        var left = VisitExpr(expr.Left);
+        var right = VisitExpr(expr.Right);
+
+        return Parens($"{expr.Operator.Text} {left} {right}");
     }
 }

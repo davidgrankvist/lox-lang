@@ -27,6 +27,8 @@ internal class Scanner
         {  "fun", TokenType.Fun },
         {  "class", TokenType.Class },
         {  "print", TokenType.Print },
+        {  "if", TokenType.If },
+        {  "else", TokenType.Else },
     };
 
     public Scanner(Reporter reporter)
