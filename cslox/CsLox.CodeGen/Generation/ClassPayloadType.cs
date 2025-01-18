@@ -1,4 +1,4 @@
-﻿namespace CsLox.CodeGen;
+﻿namespace CsLox.CodeGen.Generation;
 internal enum ClassPayloadType
 {
     Expression,

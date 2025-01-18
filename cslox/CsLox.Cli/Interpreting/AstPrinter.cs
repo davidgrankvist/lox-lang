@@ -72,4 +72,21 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
     {
         return "(" + s + ")";
     }
+
+    public string VisitDeclarationStmt(Stmt.DeclarationStmt stmt)
+    {
+        var es = VisitExpr(stmt.Expression);
+        return Parens("var " + stmt.Identifier.Text + " = " + es);
+    }
+
+    public string VisitVariableExpr(Expr.VariableExpr expr)
+    {
+        return expr.Identifier.Text;
+    }
+
+    public string VisitAssignmentExpr(Expr.AssignmentExpr expr)
+    {
+        var es = VisitExpr(expr.Expression);
+        return Parens(expr.Identifier.Text + " = " + es);
+    }
 }

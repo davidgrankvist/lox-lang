@@ -1,4 +1,4 @@
-﻿namespace CsLox.CodeGen;
+﻿namespace CsLox.CodeGen.Generation;
 internal readonly struct FileData
 {
     public FileData(string name, string content)

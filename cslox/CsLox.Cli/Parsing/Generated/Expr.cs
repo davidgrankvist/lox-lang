@@ -13,6 +13,8 @@ public abstract class Expr
         TResult VisitGroupExpr(GroupExpr expr);
         TResult VisitUnaryExpr(UnaryExpr expr);
         TResult VisitBinaryExpr(BinaryExpr expr);
+        TResult VisitVariableExpr(VariableExpr expr);
+        TResult VisitAssignmentExpr(AssignmentExpr expr);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -77,6 +79,36 @@ public abstract class Expr
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitBinaryExpr(this);
+        }
+    }
+    public class VariableExpr : Expr
+    {
+        public VariableExpr(Token Identifier)
+        {
+            this.Identifier = Identifier;
+        }
+
+        public readonly Token Identifier;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitVariableExpr(this);
+        }
+    }
+    public class AssignmentExpr : Expr
+    {
+        public AssignmentExpr(Token Identifier, Expr Expression)
+        {
+            this.Identifier = Identifier;
+            this.Expression = Expression;
+        }
+
+        public readonly Token Identifier;
+        public readonly Expr Expression;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitAssignmentExpr(this);
         }
     }
 

@@ -1,4 +1,4 @@
-﻿namespace CsLox.CodeGen;
+﻿namespace CsLox.CodeGen.Generation;
 internal class Generator
 {
     private const string Indent = "    ";
@@ -36,7 +36,7 @@ internal class Generator
 
         var result = "// DO NOT EDIT - THIS CLASS IS AUTO-GENERATED" + Environment.NewLine;
         result += "// See the CsLox.CodeGen project" + Environment.NewLine + Environment.NewLine;
-        result += "using CsLox.Cli.Scanning;" +Environment.NewLine + Environment.NewLine;
+        result += "using CsLox.Cli.Scanning;" + Environment.NewLine + Environment.NewLine;
         result += $"namespace {nameSpace};" + Environment.NewLine + Environment.NewLine;
         result += $"public abstract class {type}" + Environment.NewLine;
         result += "{" + Environment.NewLine;

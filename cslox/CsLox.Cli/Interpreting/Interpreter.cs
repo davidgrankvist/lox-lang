@@ -9,11 +9,13 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
 {
     private readonly Reporter reporter;
     private readonly bool debugMode;
+    private readonly InterpreterEnvironment environment;
 
     public Interpreter(Reporter reporter, bool debugMode = false)
     {
         this.reporter = reporter;
         this.debugMode = debugMode;
+        environment = new InterpreterEnvironment();
     }
 
     public void Run(Stmt ast)
@@ -161,6 +163,27 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         return null;
     }
 
+    public object VisitDeclarationStmt(Stmt.DeclarationStmt stmt)
+    {
+        var ev = stmt.Expression == null ? null : VisitExpr(stmt.Expression);
+        environment.Declare(stmt.Identifier.Text, ev);
+
+        return ev;
+    }
+
+    public object VisitAssignmentExpr(Expr.AssignmentExpr expr)
+    {
+        var ev = VisitExpr(expr.Expression);
+        environment.Declare(expr.Identifier.Text, ev);
+
+        return ev;
+    }
+
+    public object VisitVariableExpr(Expr.VariableExpr expr)
+    {
+        return environment.Get(expr.Identifier);
+    }
+
     private void AssertIsNumberOperand(Token op, object operand)
     {
         if (operand is double)
@@ -224,16 +247,6 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         else 
         {
             return a.ToString();
-        }
-    }
-
-    private class RuntimeError : Exception
-    {
-        public readonly Token Token;
-
-        public RuntimeError(Token token, string message) : base(message)
-        {
-            Token = token;
         }
     }
 }

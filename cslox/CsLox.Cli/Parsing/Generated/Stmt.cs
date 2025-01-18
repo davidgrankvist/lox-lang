@@ -12,6 +12,7 @@ public abstract class Stmt
         TResult VisitExpressionStmt(ExpressionStmt stmt);
         TResult VisitProgramStmt(ProgramStmt stmt);
         TResult VisitPrintStmt(PrintStmt stmt);
+        TResult VisitDeclarationStmt(DeclarationStmt stmt);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -56,6 +57,22 @@ public abstract class Stmt
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitPrintStmt(this);
+        }
+    }
+    public class DeclarationStmt : Stmt
+    {
+        public DeclarationStmt(Token Identifier, Expr Expression)
+        {
+            this.Identifier = Identifier;
+            this.Expression = Expression;
+        }
+
+        public readonly Token Identifier;
+        public readonly Expr Expression;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitDeclarationStmt(this);
         }
     }
 

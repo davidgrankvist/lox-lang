@@ -1,4 +1,4 @@
-﻿namespace CsLox.CodeGen;
+﻿namespace CsLox.CodeGen.Generation;
 internal class ClassPayload
 {
     private const string ExprType = "Expr";
@@ -6,7 +6,7 @@ internal class ClassPayload
 
     public ClassPayload(ClassPayloadType type, string name, List<string> properties)
     {
-        Name = name; 
+        Name = name;
         Type = type;
         Properties = properties;
         TypeStr = ToTypeStr(type);

@@ -1,4 +1,6 @@
-﻿using CsLox.Cli.Errors;
+﻿using System.ComponentModel;
+
+using CsLox.Cli.Errors;
 using CsLox.Cli.Parsing.Generated;
 using CsLox.Cli.Scanning;
 
@@ -47,13 +49,79 @@ internal class Parser
 
         while (!IsDone())
         {
-            var stmt = ParseStatement();
+            var stmt = ParseDeclaration();
             stmts.Add(stmt);
+        }
+
+        if (Peek().Type != TokenType.Eof)
+        {
+            throw ReportAndCreateError(Peek(), "Expected EOF");
         }
 
         return new Stmt.ProgramStmt(stmts);
     }
 
+    private Stmt ParseDeclaration()
+    {
+        try
+        {
+            if (Match(TokenType.Var))
+            {
+                return ParseVarDeclaration();
+            }
+
+            return ParseStatement();
+        }
+        catch (ParseError)
+        {
+            Sync();
+            return null;
+        }
+    }
+
+    private void Sync()
+    {
+        Advance();
+
+        while (!IsDone())
+        {
+            if (Previous().Type == TokenType.Semicolon)
+            {
+                return;
+            }
+
+            switch (Peek().Type)
+            {
+                case TokenType.Class:
+                case TokenType.Fun:
+                case TokenType.Var:
+                case TokenType.For:
+                case TokenType.If:
+                case TokenType.While:
+                case TokenType.Print:
+                case TokenType.Return:
+                    return;
+            }
+
+            Advance();
+        }
+    }
+
+    private Stmt ParseVarDeclaration()
+    {
+        Consume(TokenType.Identifier, "Expected identifier");
+        var id = Previous();
+
+        Expr expr = null;
+        if (Match(TokenType.Equal))
+        {
+            expr = ParseExpression();
+        }
+
+        Consume(TokenType.Semicolon, "Expected ';'");
+
+        return new Stmt.DeclarationStmt(id, expr);
+    }
 
     private Stmt ParseStatement()
     {
@@ -78,12 +146,27 @@ internal class Parser
 
     private Expr ParseExpression()
     {
-        return ParseBinary();
+        return ParseAssignment();
     }
 
-    private Expr ParseBinary()
+    private Expr ParseAssignment()
     {
-        return ParseEquality();
+        var expr = ParseEquality();
+
+        if (Match(TokenType.Equal))
+        {
+            var equals = Previous();
+            var val = ParseAssignment();
+
+            if (expr is Expr.VariableExpr ve)
+            {
+                return new Expr.AssignmentExpr(ve.Identifier, val);
+            }
+
+            throw ReportAndCreateError(equals, "Invalid assignment target");
+        }
+
+        return expr;
     }
 
     private Expr ParseEquality()
@@ -181,6 +264,11 @@ internal class Parser
             var expr = ParseExpression();
             Consume(TokenType.ParenEnd, "Expected ')'");
             return new Expr.GroupExpr(expr);
+        }
+
+        if (Match(TokenType.Identifier))
+        {
+            return new Expr.VariableExpr(Previous());
         }
 
         throw ReportAndCreateError(Peek(), "Unexpected expression");
