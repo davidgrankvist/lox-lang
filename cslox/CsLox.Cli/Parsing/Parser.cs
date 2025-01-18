@@ -1,4 +1,5 @@
 ﻿using CsLox.Cli.Errors;
+using CsLox.Cli.Parsing.Generated;
 using CsLox.Cli.Scanning;
 
 namespace CsLox.Cli.Parsing;
@@ -11,8 +12,9 @@ internal class Parser
         this.reporter = reporter;
     }
 
-    public AstNode Parse(List<Token> tokens)
+    public Stmt? Parse(List<Token> tokens)
     {
-        return new AstNode();
+        reporter.Error(0, 0, "Unable to parse anything, sorry");
+        return null;
     }
 }

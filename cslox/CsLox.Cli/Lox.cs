@@ -1,6 +1,7 @@
 ﻿using CsLox.Cli.Errors;
 using CsLox.Cli.Interpreting;
 using CsLox.Cli.Parsing;
+using CsLox.Cli.Parsing.Generated;
 
 namespace CsLox.Cli.Scanning;
 internal class Lox
@@ -28,7 +29,7 @@ internal class Lox
             return;
         }
 
-        AstNode? ast = null;
+        Stmt? ast = null;
         if (!reporter.HasError)
         {
             ast = parser.Parse(tokens);

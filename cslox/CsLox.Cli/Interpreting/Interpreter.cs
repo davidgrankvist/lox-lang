@@ -1,5 +1,5 @@
 ﻿using CsLox.Cli.Errors;
-using CsLox.Cli.Parsing;
+using CsLox.Cli.Parsing.Generated;
 
 namespace CsLox.Cli.Interpreting;
 internal class Interpreter
@@ -11,8 +11,8 @@ internal class Interpreter
         this.reporter = reporter;
     }
 
-    public void Run(AstNode ast)
+    public void Run(Stmt ast)
     {
-
+        reporter.Error(0, 0, "Unable to interpret anything, sorry");
     }
 }
