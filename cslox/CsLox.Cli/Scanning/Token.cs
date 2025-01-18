@@ -1,5 +1,5 @@
 ﻿namespace CsLox.Cli.Scanning;
-internal readonly struct Token
+public readonly struct Token
 {
     public Token(TokenType type, string? text, int line, int column, object? value = null)
     {

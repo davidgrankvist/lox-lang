@@ -1,6 +1,8 @@
 // DO NOT EDIT - THIS CLASS IS AUTO-GENERATED
 // See the CsLox.CodeGen project
 
+using CsLox.Cli.Scanning;
+
 namespace CsLox.Cli.Parsing.Generated;
 
 public abstract class Stmt
@@ -8,9 +10,10 @@ public abstract class Stmt
     public interface IVisitor<TResult>
     {
         TResult VisitExpressionStmt(ExpressionStmt stmt);
+        TResult VisitProgramStmt(ProgramStmt stmt);
     }
 
-    protected abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
+    public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
 
     public class ExpressionStmt : Stmt
     {
@@ -21,9 +24,23 @@ public abstract class Stmt
 
         public readonly Expr Expression;
 
-        protected override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitExpressionStmt(this);
+        }
+    }
+    public class ProgramStmt : Stmt
+    {
+        public ProgramStmt(List<Stmt> Statements)
+        {
+            this.Statements = Statements;
+        }
+
+        public readonly List<Stmt> Statements;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitProgramStmt(this);
         }
     }
 

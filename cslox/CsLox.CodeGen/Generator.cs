@@ -36,11 +36,12 @@ internal class Generator
 
         var result = "// DO NOT EDIT - THIS CLASS IS AUTO-GENERATED" + Environment.NewLine;
         result += "// See the CsLox.CodeGen project" + Environment.NewLine + Environment.NewLine;
+        result += "using CsLox.Cli.Scanning;" +Environment.NewLine + Environment.NewLine;
         result += $"namespace {nameSpace};" + Environment.NewLine + Environment.NewLine;
         result += $"public abstract class {type}" + Environment.NewLine;
         result += "{" + Environment.NewLine;
         result += GenerateVisitorInterface(payloads, Indent);
-        result += Indent + $"protected abstract {Generic} Accept<{Generic}>(IVisitor<{Generic}> visitor);" + Environment.NewLine + Environment.NewLine;
+        result += Indent + $"public abstract {Generic} Accept<{Generic}>(IVisitor<{Generic}> visitor);" + Environment.NewLine + Environment.NewLine;
         result += GenerateAstSubClasses(payloads, Indent);
         result += Environment.NewLine + "}";
 
@@ -115,7 +116,7 @@ internal class Generator
         var result = "";
 
         var nameType = payload.Name + payload.TypeStr;
-        result += indent + $"protected override {Generic} Accept<{Generic}>(IVisitor<{Generic}> visitor)" + Environment.NewLine;
+        result += indent + $"public override {Generic} Accept<{Generic}>(IVisitor<{Generic}> visitor)" + Environment.NewLine;
         result += indent + "{" + Environment.NewLine;
         result += indent + Indent + $"return visitor.Visit{nameType}(this);" + Environment.NewLine;
         result += indent + "}" + Environment.NewLine;

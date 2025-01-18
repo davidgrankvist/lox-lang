@@ -1,10 +1,11 @@
 ﻿namespace CsLox.Cli.Scanning;
-internal enum TokenType
+public enum TokenType
 {
-    // types
+    // literals
     Number,
     String,
-    Bool,
+    True,
+    False,
     // operators
     Plus,
     Minus,

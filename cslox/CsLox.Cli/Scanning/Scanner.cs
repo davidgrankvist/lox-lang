@@ -10,12 +10,14 @@ internal class Scanner
     private readonly List<Token> tokens = [];
 
     private int current;
-    private int line;
-    private int column;
-    private int start;
+    private int line = 1;
+    private int column = 1;
+    private int tokenStart;
 
     private static readonly Dictionary<string, TokenType> KeyWords = new Dictionary<string, TokenType>
     {
+        {  "true", TokenType.True },
+        {  "false", TokenType.False },
         {  "and", TokenType.And },
         {  "or", TokenType.Or },
         {  "nil", TokenType.Nil },
@@ -32,13 +34,15 @@ internal class Scanner
     public List<Token> Scan(string program)
     {
         current = 0;
+        line = 1;
+        column = 1;
         this.program = program;
         chars = program.ToCharArray();
         tokens.Clear();
 
         while (!IsDone())
         {
-            start = current;
+            tokenStart = current;
             ScanToken();
         }
 
@@ -92,7 +96,7 @@ internal class Scanner
                 break;
             // two characters
             case '!':
-                AddToken(Match('=') ? TokenType.BangEqual : TokenType.Equal);
+                AddToken(Match('=') ? TokenType.BangEqual : TokenType.Bang);
                 break;
             case '=':
                 AddToken(Match('=') ? TokenType.EqualEqual : TokenType.Equal);
@@ -137,8 +141,7 @@ internal class Scanner
 
     private void AddToken(TokenType tokenType, object? value = null)
     {
-        var text = program.Substring(start, current);
-        tokens.Add(new Token(tokenType, text, line, column, value));
+        tokens.Add(new Token(tokenType, ScanRawToken(), line, column, value));
     }
 
     private void ScanComment()
@@ -166,7 +169,7 @@ internal class Scanner
             return;
         }
 
-        var str = program.Substring(start + 1, current - 1);
+        var str = program.Substring(tokenStart + 1, current - 1);
         AddToken(TokenType.String, str);
     }
 
@@ -187,8 +190,13 @@ internal class Scanner
             }
         }
 
-        var num = double.Parse(program.Substring(start, current));
+        var num = double.Parse(ScanRawToken());
         AddToken(TokenType.Number, num);
+    }
+
+    private string ScanRawToken()
+    {
+        return program.Substring(tokenStart, current - tokenStart);
     }
 
     private void ScanKeywordOrIdentifier()
@@ -198,7 +206,7 @@ internal class Scanner
             Advance();
         }
 
-        var id = program.Substring(start, current);
+        var id = ScanRawToken();
         TokenType tokenType;
         if (KeyWords.TryGetValue(id, out var keyword))
         {
@@ -244,8 +252,7 @@ internal class Scanner
             return false;
         }
 
-        column++;
-        current++;
+        Advance();
         return true;
     }
 
@@ -267,6 +274,6 @@ internal class Scanner
     private void NextLine()
     {
         line++;
-        column = 0;
+        column = 1;
     }
 }

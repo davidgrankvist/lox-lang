@@ -13,6 +13,7 @@ internal class Interpreter
 
     public void Run(Stmt ast)
     {
-        reporter.Error(0, 0, "Unable to interpret anything, sorry");
+        var printer = new AstPrinter();
+        printer.Print(ast);
     }
 }

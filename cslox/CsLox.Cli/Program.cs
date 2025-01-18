@@ -16,8 +16,7 @@ internal class Program
             string? line;
             while ((line = Console.ReadLine()) != null)
             {
-                var rawLine = line + Environment.NewLine;
-                lox.Run(rawLine);
+                lox.Run(line);
             }
         }
     }
