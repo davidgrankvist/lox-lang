@@ -1,4 +1,6 @@
-﻿using CsLox.Cli.Errors;
+﻿using System.Globalization;
+
+using CsLox.Cli.Errors;
 
 namespace CsLox.Cli.Scanning;
 internal class Scanner
@@ -24,6 +26,7 @@ internal class Scanner
         {  "var", TokenType.Var },
         {  "fun", TokenType.Fun },
         {  "class", TokenType.Class },
+        {  "print", TokenType.Print },
     };
 
     public Scanner(Reporter reporter)
@@ -156,6 +159,7 @@ internal class Scanner
     {
         while (Peek() != '"' && !IsDone())
         {
+            var c = Peek();
             if (Peek() == '\n')
             {
                 NextLine();
@@ -165,11 +169,14 @@ internal class Scanner
 
         if (IsDone())
         {
+            var c = Peek();
             reporter.Error(line, column, "Unterminated string.");
             return;
         }
 
-        var str = program.Substring(tokenStart + 1, current - 1);
+        Advance();
+
+        var str = program.Substring(tokenStart + 1, current - tokenStart - 2);
         AddToken(TokenType.String, str);
     }
 
@@ -190,7 +197,7 @@ internal class Scanner
             }
         }
 
-        var num = double.Parse(ScanRawToken());
+        var num = double.Parse(ScanRawToken(), CultureInfo.InvariantCulture);
         AddToken(TokenType.Number, num);
     }
 

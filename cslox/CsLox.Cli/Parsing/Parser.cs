@@ -34,7 +34,7 @@ internal class Parser
         {
             if (ex is not ParseError)
             {
-                reporter.Error(current >= tokens.Count ? Previous() : Peek(), "Unexpected parsing error");
+                reporter.Error(current >= tokens.Count ? Previous() : Peek(), "Unexpected parsing error: " + ex.Message);
             }
         }
 
@@ -57,6 +57,13 @@ internal class Parser
 
     private Stmt ParseStatement()
     {
+        if (Match(TokenType.Print))
+        {
+            var expr = ParseExpression();
+            Consume(TokenType.Semicolon, "Expected ';'");
+            return new Stmt.PrintStmt(expr);
+        }
+
         return ParseExpressionStatement();
     }
 

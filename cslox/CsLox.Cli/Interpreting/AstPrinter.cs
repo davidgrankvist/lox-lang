@@ -63,6 +63,11 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
         return Parens(expr.Operator.Text + " " + es);
     }
 
+    public string VisitPrintStmt(Stmt.PrintStmt stmt)
+    {
+        return Parens("print " + VisitExpr(stmt.Expression));
+    }
+
     private string Parens(string s)
     {
         return "(" + s + ")";

@@ -13,6 +13,7 @@ internal class Program
             // statements
             new ClassPayload(ClassPayloadType.Statement, "Expression", ["Expr Expression"]),
             new ClassPayload(ClassPayloadType.Statement, "Program", ["List<Stmt> Statements"]),
+            new ClassPayload(ClassPayloadType.Statement, "Print", ["Expr Expression"]),
         ];
 
         var files = Generator.Generate(payloads, "CsLox.Cli.Parsing.Generated");

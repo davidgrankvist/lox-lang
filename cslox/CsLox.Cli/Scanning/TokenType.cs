@@ -31,6 +31,7 @@ public enum TokenType
     Var,
     Fun,
     Class,
+    Print,
     // special
     Identifier,
     Semicolon,
