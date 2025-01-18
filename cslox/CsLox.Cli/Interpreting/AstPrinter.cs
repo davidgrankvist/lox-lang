@@ -126,4 +126,11 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
 
         return Parens($"{expr.Operator.Text} {left} {right}");
     }
+
+    public string VisitWhileStmt(Stmt.WhileStmt stmt)
+    {
+        var condition = VisitExpr(stmt.Condtition);
+        var body = VisitStmt(stmt.Body);
+        return Parens("while " + condition + " " + body);
+    }
 }

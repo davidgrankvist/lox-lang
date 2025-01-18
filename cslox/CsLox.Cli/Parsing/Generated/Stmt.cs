@@ -15,6 +15,7 @@ public abstract class Stmt
         TResult VisitDeclarationStmt(DeclarationStmt stmt);
         TResult VisitBlockStmt(BlockStmt stmt);
         TResult VisitIfStmt(IfStmt stmt);
+        TResult VisitWhileStmt(WhileStmt stmt);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -107,6 +108,22 @@ public abstract class Stmt
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitIfStmt(this);
+        }
+    }
+    public class WhileStmt : Stmt
+    {
+        public WhileStmt(Expr Condtition, Stmt Body)
+        {
+            this.Condtition = Condtition;
+            this.Body = Body;
+        }
+
+        public readonly Expr Condtition;
+        public readonly Stmt Body;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitWhileStmt(this);
         }
     }
 

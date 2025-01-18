@@ -29,6 +29,8 @@ internal class Scanner
         {  "print", TokenType.Print },
         {  "if", TokenType.If },
         {  "else", TokenType.Else },
+        {  "while", TokenType.While },
+        {  "for", TokenType.For },
     };
 
     public Scanner(Reporter reporter)

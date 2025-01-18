@@ -238,6 +238,17 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         return right;
     }
 
+    public object VisitWhileStmt(Stmt.WhileStmt stmt)
+    {
+        object condition;
+        while (IsTruthy(condition = VisitExpr(stmt.Condtition)))
+        {
+            VisitStmt(stmt.Body);
+        }
+
+        return null;
+    }
+
     private void AssertIsNumberOperand(Token op, object operand)
     {
         if (operand is double)

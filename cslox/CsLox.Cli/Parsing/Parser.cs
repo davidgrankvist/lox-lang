@@ -110,7 +110,95 @@ internal class Parser
             return ParseIf();
         }
 
+        if (Match(TokenType.While))
+        {
+            return ParseWhile();
+        }
+
+        if (Match(TokenType.For))
+        {
+            return ParseFor();
+        }
+
         return ParseExpressionStatement();
+    }
+
+    private Stmt ParseFor()
+    {
+        Consume(TokenType.ParenStart, "Expected '('");
+        Stmt initializer;
+        if (Match(TokenType.Semicolon))
+        {
+            initializer = null;
+        }
+        else if (Match(TokenType.Var))
+        {
+            initializer = ParseVarDeclaration();
+        }
+        else
+        {
+            initializer = ParseExpressionStatement();
+        }
+
+        Expr condition = null;
+        if (!Check(TokenType.Semicolon))
+        {
+            condition = ParseExpression();
+        }
+        Consume(TokenType.Semicolon, "Expected ';' after condition");
+
+        Expr increment = null;
+        if (!Check(TokenType.ParenEnd))
+        {
+            increment = ParseExpression();
+        }
+
+        Consume(TokenType.ParenEnd, "Expected ')'");
+        var body = ParseStatement();
+
+        return DesugarForToWhile(initializer, condition, increment, body);
+    }
+
+    private Stmt DesugarForToWhile(Stmt? initializer, Expr? condition, Expr? increment, Stmt body)
+    {
+        List<Stmt> innerStmts = [];
+        if (body is Stmt.BlockStmt block)
+        {
+            innerStmts.AddRange(block.Statements);
+        }
+        else
+        {
+            innerStmts.Add(body);
+        }
+
+        if (increment != null)
+        {
+            innerStmts.Add(new Stmt.ExpressionStmt(increment));
+        }
+
+        var innerBlock = new Stmt.BlockStmt(innerStmts);
+
+        List<Stmt> outerStmts = [];
+        if (initializer != null)
+        {
+            outerStmts.Add(initializer);
+        }
+
+        var con = condition ?? new Expr.LiteralExpr(true);
+        outerStmts.Add(new Stmt.WhileStmt(con, innerBlock));
+
+        var outerBlock = new Stmt.BlockStmt(outerStmts);
+        return outerBlock;
+    }
+
+    private Stmt ParseWhile()
+    {
+        Consume(TokenType.ParenStart, "Expected '('");
+        var condition = ParseExpression();
+        Consume(TokenType.ParenEnd, "Expected ')'");
+        var body = ParseStatement();
+
+        return new Stmt.WhileStmt(condition, body);
     }
 
     private Stmt ParseIf()
