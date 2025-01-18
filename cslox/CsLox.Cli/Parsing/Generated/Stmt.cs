@@ -13,6 +13,7 @@ public abstract class Stmt
         TResult VisitProgramStmt(ProgramStmt stmt);
         TResult VisitPrintStmt(PrintStmt stmt);
         TResult VisitDeclarationStmt(DeclarationStmt stmt);
+        TResult VisitBlockStmt(BlockStmt stmt);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -73,6 +74,20 @@ public abstract class Stmt
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitDeclarationStmt(this);
+        }
+    }
+    public class BlockStmt : Stmt
+    {
+        public BlockStmt(List<Stmt> Statements)
+        {
+            this.Statements = Statements;
+        }
+
+        public readonly List<Stmt> Statements;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitBlockStmt(this);
         }
     }
 

@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-
-using CsLox.Cli.Errors;
+﻿using CsLox.Cli.Errors;
 using CsLox.Cli.Parsing.Generated;
 using CsLox.Cli.Scanning;
 
@@ -130,6 +128,17 @@ internal class Parser
             var expr = ParseExpression();
             Consume(TokenType.Semicolon, "Expected ';'");
             return new Stmt.PrintStmt(expr);
+        }
+
+        if (Match(TokenType.CurlyStart))
+        {
+            var stmts = new List<Stmt>();
+            while (!IsDone() && Peek().Type != TokenType.CurlyEnd)
+            {
+                stmts.Add(ParseDeclaration());
+            }
+            Consume(TokenType.CurlyEnd, "Expected '}'");
+            return new Stmt.BlockStmt(stmts);
         }
 
         return ParseExpressionStatement();

@@ -9,7 +9,7 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
 {
     private readonly Reporter reporter;
     private readonly bool debugMode;
-    private readonly InterpreterEnvironment environment;
+    private InterpreterEnvironment environment;
 
     public Interpreter(Reporter reporter, bool debugMode = false)
     {
@@ -174,7 +174,7 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
     public object VisitAssignmentExpr(Expr.AssignmentExpr expr)
     {
         var ev = VisitExpr(expr.Expression);
-        environment.Declare(expr.Identifier.Text, ev);
+        environment.Assign(expr.Identifier, ev);
 
         return ev;
     }
@@ -182,6 +182,19 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
     public object VisitVariableExpr(Expr.VariableExpr expr)
     {
         return environment.Get(expr.Identifier);
+    }
+
+    public object VisitBlockStmt(Stmt.BlockStmt stmt)
+    {
+        environment = new InterpreterEnvironment(environment);
+
+        foreach (var st in stmt.Statements)
+        {
+            VisitStmt(st);
+        }
+
+        environment = environment.Parent;
+        return null;
     }
 
     private void AssertIsNumberOperand(Token op, object operand)

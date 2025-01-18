@@ -68,11 +68,6 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
         return Parens("print " + VisitExpr(stmt.Expression));
     }
 
-    private string Parens(string s)
-    {
-        return "(" + s + ")";
-    }
-
     public string VisitDeclarationStmt(Stmt.DeclarationStmt stmt)
     {
         var es = VisitExpr(stmt.Expression);
@@ -88,5 +83,21 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
     {
         var es = VisitExpr(expr.Expression);
         return Parens(expr.Identifier.Text + " = " + es);
+    }
+
+    public string VisitBlockStmt(Stmt.BlockStmt stmt)
+    {
+        var result = "block";
+        foreach (var st in stmt.Statements)
+        {
+            var s = " " + VisitStmt(st);
+            result += s;
+        }
+        return Parens(result);
+    }
+
+    private string Parens(string s)
+    {
+        return "(" + s + ")";
     }
 }

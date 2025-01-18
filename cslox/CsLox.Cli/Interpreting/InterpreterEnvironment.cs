@@ -5,7 +5,7 @@ internal class InterpreterEnvironment
 {
     private readonly Dictionary<string, object> variables = [];
 
-    private InterpreterEnvironment Parent;
+    public readonly InterpreterEnvironment Parent;
 
     public InterpreterEnvironment()
     {
@@ -21,6 +21,22 @@ internal class InterpreterEnvironment
         variables[name] = value;
     }
 
+    public void Assign(Token Identifier, object value)
+    {
+        if (variables.ContainsKey(Identifier.Text))
+        {
+            Declare(Identifier.Text, value);
+        }
+        else if (Parent != null)
+        {
+            Parent.Assign(Identifier, value);
+        }
+        else
+        {
+            throw new RuntimeError(Identifier, "Undefined variable");
+        }
+    }
+
     public object Get(Token Identifier)
     {
         if (variables.TryGetValue(Identifier.Text, out var v))
@@ -31,6 +47,9 @@ internal class InterpreterEnvironment
         {
             return Parent.Get(Identifier);
         }
-        throw new RuntimeError(Identifier, "Undefined variable");
+        else
+        {
+            throw new RuntimeError(Identifier, "Undefined variable");
+        }
     }
 }

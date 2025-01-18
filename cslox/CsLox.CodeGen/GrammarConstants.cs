@@ -16,5 +16,6 @@ internal static class GrammarConstants
             new ClassPayload(ClassPayloadType.Statement, "Program", ["List<Stmt> Statements"]),
             new ClassPayload(ClassPayloadType.Statement, "Print", ["Expr Expression"]),
             new ClassPayload(ClassPayloadType.Statement, "Declaration", ["Token Identifier", "Expr Expression"]),
+            new ClassPayload(ClassPayloadType.Statement, "Block", ["List<Stmt> Statements"]),
         ];
 }
