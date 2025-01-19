@@ -62,11 +62,22 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         var op = expr.Operator;
         switch(op.Type)
         {
-            // numbers - operators
+            // numbers/strings - operators
             case TokenType.Plus:
-                AssertAreNumberOperands(op, left, right);
-                result = (double)left + (double)right;
+                if (left is string ls && right is string rs)
+                {
+                    result = ls + rs;
+                }
+                else if (left is double ld && right is double rd)
+                {
+                    result = ld + rd;
+                }
+                else
+                {
+                    throw new RuntimeError(op, "Operands must be numbers or strings");
+                }
                 break;
+            // numbers - operators
             case TokenType.Minus:
                 AssertAreNumberOperands(op, left, right);
                 result = (double)left - (double)right;
