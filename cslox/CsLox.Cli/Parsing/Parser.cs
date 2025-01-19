@@ -68,6 +68,11 @@ internal class Parser
                 return ParseVarDeclaration();
             }
 
+            if (Match(TokenType.Fun))
+            {
+                return ParseFunDeclaration();
+            }
+
             return ParseStatement();
         }
         catch (ParseError)
@@ -91,6 +96,44 @@ internal class Parser
         Consume(TokenType.Semicolon, "Expected ';'");
 
         return new Stmt.DeclarationStmt(id, expr);
+    }
+
+    private Stmt ParseFunDeclaration()
+    {
+        var id = Consume(TokenType.Identifier, "Expected function identifier");
+        Consume(TokenType.ParenStart, "Expected '(' when declaring function");
+        var parameters = FinishFunParams();
+
+        Consume(TokenType.CurlyStart, "Expected '{' before function body");
+        var block = (Stmt.BlockStmt)ParseBlock();
+
+        return new Stmt.FunDeclarationStmt(id, parameters, block.Statements);
+    }
+
+    private List<Token> FinishFunParams()
+    {
+        var paren = Previous();
+        var parameters = ParseParams();
+        Consume(TokenType.ParenEnd, "Expected ')' when declaring function");
+        return parameters;
+    }
+
+    private List<Token> ParseParams()
+    {
+        var parameters = new List<Token>();
+        if (!Check(TokenType.ParenEnd))
+        {
+            do
+            {
+                if (parameters.Count > LoxLimits.MaxNumArgs)
+                {
+                    throw ReportAndCreateError(Previous(), $"Exceeded maximum number of parameters {LoxLimits.MaxNumArgs}");
+                }
+                var p = Consume(TokenType.Identifier, "Expected parameter identifier");
+                parameters.Add(p);
+            } while (Match(TokenType.Comma));
+        }
+        return parameters;
     }
 
     private Stmt ParseStatement()
@@ -120,7 +163,24 @@ internal class Parser
             return ParseFor();
         }
 
+        if (Match(TokenType.Return))
+        {
+            return ParseReturn();
+        }
+
         return ParseExpressionStatement();
+    }
+
+    private Stmt ParseReturn()
+    {
+        Expr expr = null;
+        if (!Check(TokenType.Semicolon))
+        {
+            expr = ParseExpression();
+        }
+        Consume(TokenType.Semicolon, "Expected ';' after return");
+
+        return new Stmt.ReturnStmt(expr);
     }
 
     private Stmt ParseFor()
@@ -361,7 +421,46 @@ internal class Parser
             return new Expr.UnaryExpr(op, expr);
         }
 
-        return ParsePrimary();
+        return ParseCall();
+    }
+
+    private Expr ParseCall()
+    {
+        var callee = ParsePrimary();
+
+        while(Match(TokenType.ParenStart))
+        {
+            callee = FinishCall(callee);
+        }
+
+        return callee;
+    }
+
+    private Expr FinishCall(Expr callee)
+    {
+        var paren = Previous();
+        var args = ParseArguments();
+        Consume(TokenType.ParenEnd, "Expected ')' when calling");
+
+        return new Expr.CallExpr(callee, paren, args);
+    }
+
+    private List<Expr> ParseArguments()
+    {
+        var args = new List<Expr>();
+        if (!Check(TokenType.ParenEnd))
+        {
+            do
+            {
+                if (args.Count > LoxLimits.MaxNumArgs)
+                {
+                    throw ReportAndCreateError(Previous(), $"Exceeded maximum number of arguments {LoxLimits.MaxNumArgs}");
+                }
+                var arg = ParseExpression();
+                args.Add(arg);
+            } while (Match(TokenType.Comma));
+        }
+        return args;
     }
 
     private Expr ParsePrimary()

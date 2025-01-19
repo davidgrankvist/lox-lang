@@ -16,6 +16,8 @@ public abstract class Stmt
         TResult VisitBlockStmt(BlockStmt stmt);
         TResult VisitIfStmt(IfStmt stmt);
         TResult VisitWhileStmt(WhileStmt stmt);
+        TResult VisitFunDeclarationStmt(FunDeclarationStmt stmt);
+        TResult VisitReturnStmt(ReturnStmt stmt);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -124,6 +126,38 @@ public abstract class Stmt
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitWhileStmt(this);
+        }
+    }
+    public class FunDeclarationStmt : Stmt
+    {
+        public FunDeclarationStmt(Token Identifier, List<Token> Parameters, List<Stmt> Body)
+        {
+            this.Identifier = Identifier;
+            this.Parameters = Parameters;
+            this.Body = Body;
+        }
+
+        public readonly Token Identifier;
+        public readonly List<Token> Parameters;
+        public readonly List<Stmt> Body;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitFunDeclarationStmt(this);
+        }
+    }
+    public class ReturnStmt : Stmt
+    {
+        public ReturnStmt(Expr Expression)
+        {
+            this.Expression = Expression;
+        }
+
+        public readonly Expr Expression;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitReturnStmt(this);
         }
     }
 

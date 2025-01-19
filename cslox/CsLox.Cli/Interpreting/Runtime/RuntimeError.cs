@@ -1,6 +1,6 @@
 ﻿using CsLox.Cli.Scanning;
 
-namespace CsLox.Cli.Interpreting;
+namespace CsLox.Cli.Interpreting.Runtime;
 
 internal class RuntimeError : Exception
 {

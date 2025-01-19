@@ -1,6 +1,6 @@
 ﻿using CsLox.Cli.Parsing.Generated;
 
-namespace CsLox.Cli.Interpreting;
+namespace CsLox.Cli.Interpreting.Development;
 internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
 {
     private const string Indent = "    ";
@@ -132,5 +132,46 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
         var condition = VisitExpr(stmt.Condtition);
         var body = VisitStmt(stmt.Body);
         return Parens("while " + condition + " " + body);
+    }
+
+    public string VisitCallExpr(Expr.CallExpr expr)
+    {
+        var calle = VisitExpr(expr.Callee);
+        var args = "";
+        for (var i = 0; i < expr.Arguments.Count; i++)
+        {
+            var arg = expr.Arguments[i];
+            args += VisitExpr(arg) + (i == expr.Arguments.Count - 1 ? "" : ", ");
+        }
+
+        return calle + Parens(args);
+    }
+
+    public string VisitFunDeclarationStmt(Stmt.FunDeclarationStmt stmt)
+    {
+        var result = "fun " + stmt.Identifier.Text + " ";
+
+        var ps = "";
+        for (var i = 0; i < stmt.Parameters.Count; i++)
+        {
+            var p = stmt.Parameters[i];
+            ps += p.Text  + (i == stmt.Parameters.Count - 1 ? "" : ", ");
+        }
+        result += Parens(ps);
+
+        var sts = "";
+        foreach (var st in stmt.Body)
+        {
+            var s = " " + VisitStmt(st);
+            sts += s;
+        }
+        result += Parens(sts);
+
+        return result;
+    }
+
+    public string VisitReturnStmt(Stmt.ReturnStmt stmt)
+    {
+        return "return " + (stmt.Expression == null ? "" : VisitExpr(stmt.Expression));
     }
 }

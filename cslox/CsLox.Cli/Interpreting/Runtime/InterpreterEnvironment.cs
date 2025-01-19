@@ -1,6 +1,6 @@
 ﻿using CsLox.Cli.Scanning;
 
-namespace CsLox.Cli.Interpreting;
+namespace CsLox.Cli.Interpreting.Runtime;
 internal class InterpreterEnvironment
 {
     private readonly Dictionary<string, object> variables = [];
@@ -49,7 +49,7 @@ internal class InterpreterEnvironment
         }
         else
         {
-            throw new RuntimeError(Identifier, "Undefined variable");
+            throw new RuntimeError(Identifier, "Undefined identifier");
         }
     }
 }

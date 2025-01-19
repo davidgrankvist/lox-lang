@@ -12,6 +12,7 @@ internal static class GrammarConstants
             new ClassPayload(ClassPayloadType.Expression, "Variable", ["Token Identifier"]),
             new ClassPayload(ClassPayloadType.Expression, "Assignment", ["Token Identifier", "Expr Expression"]),
             new ClassPayload(ClassPayloadType.Expression, "Logical", ["Expr Left", "Token Operator", "Expr Right"]),
+            new ClassPayload(ClassPayloadType.Expression, "Call", ["Expr Callee", "Token LeftParen", "List<Expr> Arguments"]),
             // statements
             new ClassPayload(ClassPayloadType.Statement, "Expression", ["Expr Expression"]),
             new ClassPayload(ClassPayloadType.Statement, "Program", ["List<Stmt> Statements"]),
@@ -20,5 +21,7 @@ internal static class GrammarConstants
             new ClassPayload(ClassPayloadType.Statement, "Block", ["List<Stmt> Statements"]),
             new ClassPayload(ClassPayloadType.Statement, "If", ["Expr Condtition", "Stmt IfSt", "Stmt ElseSt"]),
             new ClassPayload(ClassPayloadType.Statement, "While", ["Expr Condtition", "Stmt Body"]),
+            new ClassPayload(ClassPayloadType.Statement, "FunDeclaration", ["Token Identifier", "List<Token> Parameters", "List<Stmt> Body"]),
+            new ClassPayload(ClassPayloadType.Statement, "Return", ["Expr Expression"]),
         ];
 }

@@ -1,6 +1,9 @@
 ﻿using System.Globalization;
 
 using CsLox.Cli.Errors;
+using CsLox.Cli.Interpreting.Development;
+using CsLox.Cli.Interpreting.Runtime;
+using CsLox.Cli.Interpreting.Runtime.Native;
 using CsLox.Cli.Parsing.Generated;
 using CsLox.Cli.Scanning;
 
@@ -9,13 +12,17 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
 {
     private readonly Reporter reporter;
     private readonly bool debugMode;
+
+    private readonly InterpreterEnvironment globals;
     private InterpreterEnvironment environment;
 
     public Interpreter(Reporter reporter, bool debugMode = false)
     {
         this.reporter = reporter;
         this.debugMode = debugMode;
-        environment = new InterpreterEnvironment();
+        globals = new InterpreterEnvironment();
+        GlobalRegistrations.Register(globals);
+        environment = globals;
     }
 
     public void Run(Stmt ast)
@@ -260,6 +267,45 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         return null;
     }
 
+    public object VisitCallExpr(Expr.CallExpr expr)
+    {
+        var callee = VisitExpr(expr.Callee);
+        if (callee is not ICallableFunction fun)
+        {
+            throw new RuntimeError(expr.LeftParen, "Can only call functions and methods");
+        }
+
+        if (expr.Arguments.Count != fun.Arity)
+        {
+            throw new RuntimeError(expr.LeftParen, $"Expected {fun.Arity} arguments, but received {expr.Arguments.Count}");
+        }
+
+        var args = new List<object>();
+        foreach (var arg in expr.Arguments)
+        {
+            args.Add(VisitExpr(arg));
+        }
+
+        return fun.Call(this, args);
+    }
+
+    public object VisitFunDeclarationStmt(Stmt.FunDeclarationStmt stmt)
+    {
+        var fun = new LoxFunction(stmt, environment);
+        environment.Declare(stmt.Identifier.Text, fun);
+
+        return null;
+    }
+    public object VisitReturnStmt(Stmt.ReturnStmt stmt)
+    {
+        object val = null;
+        if (stmt.Expression != null)
+        {
+            val = VisitExpr(stmt.Expression);
+        }
+        throw new Return(val);
+    }
+
     private void AssertIsNumberOperand(Token op, object operand)
     {
         if (operand is double)
@@ -327,6 +373,23 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         else 
         {
             return a.ToString();
+        }
+    }
+
+    internal void ExecuteBlock(List<Stmt> body, InterpreterEnvironment env)
+    {
+        environment = env;
+
+        try
+        {
+            foreach (var st in body)
+            {
+                VisitStmt(st);
+            }
+        }
+        finally
+        {
+            environment = env.Parent;
         }
     }
 }

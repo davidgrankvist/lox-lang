@@ -16,6 +16,7 @@ public abstract class Expr
         TResult VisitVariableExpr(VariableExpr expr);
         TResult VisitAssignmentExpr(AssignmentExpr expr);
         TResult VisitLogicalExpr(LogicalExpr expr);
+        TResult VisitCallExpr(CallExpr expr);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -128,6 +129,24 @@ public abstract class Expr
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitLogicalExpr(this);
+        }
+    }
+    public class CallExpr : Expr
+    {
+        public CallExpr(Expr Callee, Token LeftParen, List<Expr> Arguments)
+        {
+            this.Callee = Callee;
+            this.LeftParen = LeftParen;
+            this.Arguments = Arguments;
+        }
+
+        public readonly Expr Callee;
+        public readonly Token LeftParen;
+        public readonly List<Expr> Arguments;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitCallExpr(this);
         }
     }
 
