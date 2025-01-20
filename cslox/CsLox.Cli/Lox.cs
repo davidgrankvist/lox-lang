@@ -9,6 +9,7 @@ internal class Lox
     private readonly Reporter reporter;
     private readonly Scanner scanner;
     private readonly Parser parser;
+    private readonly Resolver resolver;
     private readonly Interpreter interpreter;
 
     public Lox()
@@ -17,6 +18,7 @@ internal class Lox
         scanner = new Scanner(reporter);
         parser = new Parser(reporter);
         interpreter = new Interpreter(reporter);
+        resolver = new Resolver(reporter, interpreter);
     }
 
     public void Run(string program)
@@ -33,6 +35,11 @@ internal class Lox
         if (!reporter.HasError)
         {
             ast = parser.Parse(tokens);
+        }
+
+        if (!reporter.HasError && ast != null)
+        {
+            resolver.Resolve(ast);
         }
 
         if (!reporter.HasError && ast != null)

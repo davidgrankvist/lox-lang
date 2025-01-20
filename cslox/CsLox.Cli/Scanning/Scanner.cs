@@ -16,7 +16,7 @@ internal class Scanner
     private int column = 1;
     private int tokenStart;
 
-    private static readonly Dictionary<string, TokenType> KeyWords = new Dictionary<string, TokenType>
+    private static readonly Dictionary<string, TokenType> keywords = new Dictionary<string, TokenType>
     {
         {  "true", TokenType.True },
         {  "false", TokenType.False },
@@ -149,7 +149,8 @@ internal class Scanner
 
     private void AddToken(TokenType tokenType, object? value = null)
     {
-        tokens.Add(new Token(tokenType, ScanRawToken(), line, column, value));
+        var rawToken = ScanRawToken();
+        tokens.Add(new Token(tokenType, rawToken, line, column - rawToken.Length, value));
     }
 
     private void ScanComment()
@@ -220,7 +221,7 @@ internal class Scanner
 
         var id = ScanRawToken();
         TokenType tokenType;
-        if (KeyWords.TryGetValue(id, out var keyword))
+        if (keywords.TryGetValue(id, out var keyword))
         {
             tokenType = keyword;
         }
@@ -229,7 +230,6 @@ internal class Scanner
             tokenType = TokenType.Identifier;
         }
         AddToken(tokenType, id);
-
     }
 
     private bool IsDigit(char c)

@@ -148,11 +148,13 @@ public abstract class Stmt
     }
     public class ReturnStmt : Stmt
     {
-        public ReturnStmt(Expr Expression)
+        public ReturnStmt(Token KeywordToken, Expr Expression)
         {
+            this.KeywordToken = KeywordToken;
             this.Expression = Expression;
         }
 
+        public readonly Token KeywordToken;
         public readonly Expr Expression;
 
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)

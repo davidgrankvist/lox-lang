@@ -173,6 +173,7 @@ internal class Parser
 
     private Stmt ParseReturn()
     {
+        var token = Previous();
         Expr expr = null;
         if (!Check(TokenType.Semicolon))
         {
@@ -180,7 +181,7 @@ internal class Parser
         }
         Consume(TokenType.Semicolon, "Expected ';' after return");
 
-        return new Stmt.ReturnStmt(expr);
+        return new Stmt.ReturnStmt(token, expr);
     }
 
     private Stmt ParseFor()

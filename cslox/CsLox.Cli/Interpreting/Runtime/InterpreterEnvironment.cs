@@ -1,4 +1,6 @@
-﻿using CsLox.Cli.Scanning;
+﻿
+
+using CsLox.Cli.Scanning;
 
 namespace CsLox.Cli.Interpreting.Runtime;
 internal class InterpreterEnvironment
@@ -51,5 +53,26 @@ internal class InterpreterEnvironment
         {
             throw new RuntimeError(Identifier, "Undefined identifier");
         }
+    }
+
+    public object GetAt(Token identifier, int distance)
+    {
+        return Ancestor(distance).Get(identifier);
+    }
+
+    private InterpreterEnvironment Ancestor(int distance)
+    {
+        var current = this;
+        for (var i = 0; i < distance; i++)
+        {
+            current = current.Parent;
+        }
+
+        return current;
+    }
+
+    public void AssignAt(Token identifier, object ev, int distance)
+    {
+        Ancestor(distance).Assign(identifier, ev);
     }
 }

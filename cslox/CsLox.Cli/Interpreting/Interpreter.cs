@@ -15,6 +15,7 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
 
     private readonly InterpreterEnvironment globals;
     private InterpreterEnvironment environment;
+    private readonly Dictionary<Expr, int> locals = [];
 
     public Interpreter(Reporter reporter, bool debugMode = false)
     {
@@ -192,14 +193,34 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
     public object VisitAssignmentExpr(Expr.AssignmentExpr expr)
     {
         var ev = VisitExpr(expr.Expression);
-        environment.Assign(expr.Identifier, ev);
+
+        if (locals.TryGetValue(expr, out var distance))
+        {
+            environment.AssignAt(expr.Identifier, ev, distance);
+        }
+        else
+        {
+            globals.Assign(expr.Identifier, ev);
+        }
 
         return ev;
     }
 
     public object VisitVariableExpr(Expr.VariableExpr expr)
     {
-        return environment.Get(expr.Identifier);
+        return VisitScopedVariable(expr, expr.Identifier);
+    }
+
+    private object VisitScopedVariable(Expr expr, Token identifier)
+    {
+        if (locals.TryGetValue(expr, out var distance))
+        {
+            return environment.GetAt(identifier, distance);
+        }
+        else
+        {
+            return globals.Get(identifier);
+        }
     }
 
     public object VisitBlockStmt(Stmt.BlockStmt stmt)
@@ -391,5 +412,10 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         {
             environment = env.Parent;
         }
+    }
+
+    internal void ResolveLocalVariable(Expr expr, int depth)
+    {
+        locals[expr] = depth;
     }
 }
