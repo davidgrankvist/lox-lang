@@ -17,6 +17,9 @@ public abstract class Expr
         TResult VisitAssignmentExpr(AssignmentExpr expr);
         TResult VisitLogicalExpr(LogicalExpr expr);
         TResult VisitCallExpr(CallExpr expr);
+        TResult VisitPropertyAccessExpr(PropertyAccessExpr expr);
+        TResult VisitPropertyAssignmentExpr(PropertyAssignmentExpr expr);
+        TResult VisitThisExpr(ThisExpr expr);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -147,6 +150,54 @@ public abstract class Expr
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitCallExpr(this);
+        }
+    }
+    public class PropertyAccessExpr : Expr
+    {
+        public PropertyAccessExpr(Expr Object, Token Identifier)
+        {
+            this.Object = Object;
+            this.Identifier = Identifier;
+        }
+
+        public readonly Expr Object;
+        public readonly Token Identifier;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitPropertyAccessExpr(this);
+        }
+    }
+    public class PropertyAssignmentExpr : Expr
+    {
+        public PropertyAssignmentExpr(Expr Object, Token Identifier, Expr Value)
+        {
+            this.Object = Object;
+            this.Identifier = Identifier;
+            this.Value = Value;
+        }
+
+        public readonly Expr Object;
+        public readonly Token Identifier;
+        public readonly Expr Value;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitPropertyAssignmentExpr(this);
+        }
+    }
+    public class ThisExpr : Expr
+    {
+        public ThisExpr(Token Keyword)
+        {
+            this.Keyword = Keyword;
+        }
+
+        public readonly Token Keyword;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitThisExpr(this);
         }
     }
 

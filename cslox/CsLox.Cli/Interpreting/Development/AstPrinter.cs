@@ -149,13 +149,19 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
 
     public string VisitFunDeclarationStmt(Stmt.FunDeclarationStmt stmt)
     {
-        var result = "fun " + stmt.Identifier.Text + " ";
+        return VisitFunDeclarationStmtInternal(stmt);
+    }
+
+    private string VisitFunDeclarationStmtInternal(Stmt.FunDeclarationStmt stmt, bool method = false)
+    {
+        var prefix = method ? "" : "fun ";
+        var result = prefix + stmt.Identifier.Text + " ";
 
         var ps = "";
         for (var i = 0; i < stmt.Parameters.Count; i++)
         {
             var p = stmt.Parameters[i];
-            ps += p.Text  + (i == stmt.Parameters.Count - 1 ? "" : ", ");
+            ps += p.Text + (i == stmt.Parameters.Count - 1 ? "" : ", ");
         }
         result += Parens(ps);
 
@@ -173,5 +179,33 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
     public string VisitReturnStmt(Stmt.ReturnStmt stmt)
     {
         return "return " + (stmt.Expression == null ? "" : VisitExpr(stmt.Expression));
+    }
+
+    public string VisitClassStmt(Stmt.ClassStmt stmt)
+    {
+        var result = "class " + stmt.Identifier.Text;
+
+        foreach (var m in stmt.Methods)
+        {
+            var ms = VisitFunDeclarationStmtInternal(m, true);
+            result += " " + ms;
+        }
+
+        return Parens(result);
+    }
+
+    public string VisitPropertyAccessExpr(Expr.PropertyAccessExpr expr)
+    {
+        return VisitExpr(expr.Object) + "." + expr.Identifier.Text;
+    }
+
+    public string VisitPropertyAssignmentExpr(Expr.PropertyAssignmentExpr expr)
+    {
+        return VisitExpr(expr.Object) + " = " + VisitExpr(expr.Value);
+    }
+
+    public string VisitThisExpr(Expr.ThisExpr expr)
+    {
+        return "this";
     }
 }

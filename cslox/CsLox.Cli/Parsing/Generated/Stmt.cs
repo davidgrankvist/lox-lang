@@ -18,6 +18,7 @@ public abstract class Stmt
         TResult VisitWhileStmt(WhileStmt stmt);
         TResult VisitFunDeclarationStmt(FunDeclarationStmt stmt);
         TResult VisitReturnStmt(ReturnStmt stmt);
+        TResult VisitClassStmt(ClassStmt stmt);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -160,6 +161,22 @@ public abstract class Stmt
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitReturnStmt(this);
+        }
+    }
+    public class ClassStmt : Stmt
+    {
+        public ClassStmt(Token Identifier, List<Stmt.FunDeclarationStmt> Methods)
+        {
+            this.Identifier = Identifier;
+            this.Methods = Methods;
+        }
+
+        public readonly Token Identifier;
+        public readonly List<Stmt.FunDeclarationStmt> Methods;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitClassStmt(this);
         }
     }
 

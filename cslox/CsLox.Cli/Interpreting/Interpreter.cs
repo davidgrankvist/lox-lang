@@ -312,7 +312,7 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
 
     public object VisitFunDeclarationStmt(Stmt.FunDeclarationStmt stmt)
     {
-        var fun = new LoxFunction(stmt, environment);
+        var fun = new LoxFunction(stmt, environment, false);
         environment.Declare(stmt.Identifier.Text, fun);
 
         return null;
@@ -325,6 +325,50 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
             val = VisitExpr(stmt.Expression);
         }
         throw new Return(val);
+    }
+
+    public object VisitClassStmt(Stmt.ClassStmt stmt)
+    {
+        environment.Declare(stmt.Identifier.Text, null);
+
+        var methods = new Dictionary<string, LoxFunction>();
+        foreach (var decl in stmt.Methods)
+        {
+            var m = new LoxFunction(decl, environment, decl.Identifier.Text == "init");
+            methods[decl.Identifier.Text] = m;
+        }
+        var clazz = new LoxClass(stmt.Identifier, methods);
+
+        environment.Assign(stmt.Identifier, clazz);
+        return null;
+    }
+
+    public object VisitPropertyAccessExpr(Expr.PropertyAccessExpr expr)
+    {
+        var obj = VisitExpr(expr.Object);
+        if (obj is not LoxInstance instance)
+        {
+            throw new RuntimeError(expr.Identifier, "Can only access property of objects");
+        }
+        return instance.Get(expr.Identifier);
+    }
+
+    public object VisitPropertyAssignmentExpr(Expr.PropertyAssignmentExpr expr)
+    {
+        var obj = VisitExpr(expr.Object);
+        if (obj is not LoxInstance instance)
+        {
+            throw new RuntimeError(expr.Identifier, "Only instances have fields");
+        }
+
+        var val = VisitExpr(expr.Value);
+        instance.Set(expr.Identifier, val);
+        return val;
+    }
+
+    public object VisitThisExpr(Expr.ThisExpr expr)
+    {
+        return VisitScopedVariable(expr, expr.Keyword);
     }
 
     private void AssertIsNumberOperand(Token op, object operand)
@@ -397,8 +441,9 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         }
     }
 
-    internal void ExecuteBlock(List<Stmt> body, InterpreterEnvironment env)
+    public void ExecuteBlock(List<Stmt> body, InterpreterEnvironment env)
     {
+        var current = environment;
         environment = env;
 
         try
@@ -410,11 +455,11 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
         }
         finally
         {
-            environment = env.Parent;
+            environment = current;
         }
     }
 
-    internal void ResolveLocalVariable(Expr expr, int depth)
+    public void ResolveLocalVariable(Expr expr, int depth)
     {
         locals[expr] = depth;
     }

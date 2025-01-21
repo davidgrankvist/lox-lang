@@ -1,9 +1,9 @@
-﻿
-using CsLox.Cli.Errors;
+﻿using CsLox.Cli.Errors;
+using CsLox.Cli.Interpreting;
 using CsLox.Cli.Parsing.Generated;
 using CsLox.Cli.Scanning;
 
-namespace CsLox.Cli.Interpreting;
+namespace CsLox.Cli.Analysis;
 internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
 {
     private readonly Reporter reporter;
@@ -11,6 +11,7 @@ internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
 
     private readonly Stack<Dictionary<string, bool>> scopes = [];
     private FunctionType currentFunction = FunctionType.None;
+    private ClassType currentClass = ClassType.None;
 
     public Resolver(Reporter reporter, Interpreter interpreter)
     {
@@ -133,14 +134,14 @@ internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
     {
         Declare(stmt.Identifier);
         Define(stmt.Identifier);
-        VisitFunction(stmt);
+        VisitFunction(stmt, FunctionType.Function);
         return null;
     }
 
-    private void VisitFunction(Stmt.FunDeclarationStmt stmt)
+    private void VisitFunction(Stmt.FunDeclarationStmt stmt, FunctionType ft)
     {
         FunctionType curr = currentFunction;
-        currentFunction = FunctionType.Function;
+        currentFunction = ft;
         BeginScope();
         foreach (var token in stmt.Parameters)
         {
@@ -189,7 +190,7 @@ internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
 
     public object VisitProgramStmt(Stmt.ProgramStmt stmt)
     {
-        foreach (var st in  stmt.Statements)
+        foreach (var st in stmt.Statements)
         {
             VisitStatement(st);
         }
@@ -204,6 +205,10 @@ internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
         }
         else if (stmt.Expression != null)
         {
+            if (currentFunction == FunctionType.Initializer)
+            {
+                reporter.Error(stmt.KeywordToken, "Can't return a value from the init method");
+            }
             VisitExpression(stmt.Expression);
         }
         return null;
@@ -245,6 +250,53 @@ internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
         BeginScope();
         VisitStatement(stmt.Body);
         EndScope();
+        return null;
+    }
+
+    public object VisitClassStmt(Stmt.ClassStmt stmt)
+    {
+        var currClass = currentClass;
+        currentClass = ClassType.Class;
+        Declare(stmt.Identifier);
+        Define(stmt.Identifier);
+
+        BeginScope();
+        scopes.Peek().Add("this", true);
+
+        foreach (var st in stmt.Methods)
+        {
+            var fun = st.Identifier.Text == "init" ? FunctionType.Initializer : FunctionType.Method;
+            VisitFunction(st, fun);
+        }
+
+        EndScope();
+        currentClass = currClass;
+        return null;
+    }
+
+    public object VisitPropertyAccessExpr(Expr.PropertyAccessExpr expr)
+    {
+        VisitExpression(expr.Object);
+        return null;
+    }
+
+    public object VisitPropertyAssignmentExpr(Expr.PropertyAssignmentExpr expr)
+    {
+        VisitExpression(expr.Object);
+        VisitExpression(expr.Value);
+        return null;
+    }
+
+    public object VisitThisExpr(Expr.ThisExpr expr)
+    {
+        if (currentClass == ClassType.Class)
+        {
+            VisitLocalVariable(expr, expr.Keyword.Text);
+        }
+        else
+        {
+            reporter.Error(expr.Keyword, "Can only access 'this' within a class");
+        }
         return null;
     }
 }

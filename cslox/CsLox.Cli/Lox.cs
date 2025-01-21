@@ -1,4 +1,5 @@
-﻿using CsLox.Cli.Errors;
+﻿using CsLox.Cli.Analysis;
+using CsLox.Cli.Errors;
 using CsLox.Cli.Interpreting;
 using CsLox.Cli.Parsing;
 using CsLox.Cli.Parsing.Generated;

@@ -9,4 +9,9 @@ internal class ClockFunction : INativeFunction
     {
         return DateTime.UtcNow.Ticks / 1e7;
     }
+
+    public override string ToString()
+    {
+        return $"<native fn {Name}>";
+    }
 }

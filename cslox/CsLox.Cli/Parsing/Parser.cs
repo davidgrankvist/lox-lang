@@ -73,6 +73,11 @@ internal class Parser
                 return ParseFunDeclaration();
             }
 
+            if (Match(TokenType.Class))
+            {
+                return ParseClass();
+            }
+
             return ParseStatement();
         }
         catch (ParseError)
@@ -96,6 +101,22 @@ internal class Parser
         Consume(TokenType.Semicolon, "Expected ';'");
 
         return new Stmt.DeclarationStmt(id, expr);
+    }
+
+    private Stmt ParseClass()
+    {
+        Consume(TokenType.Identifier, "Expected class identifier");
+        var id = Previous();
+        Consume(TokenType.CurlyStart, "Expected '{'");
+        List<Stmt.FunDeclarationStmt> methods = [];
+        while (!Check(TokenType.CurlyEnd) && !IsDone())
+        {
+            var fun = ParseFunDeclaration();
+            methods.Add((Stmt.FunDeclarationStmt)fun);
+        }
+        Consume(TokenType.CurlyEnd, "Expected '}'");
+
+        return new Stmt.ClassStmt(id, methods);
     }
 
     private Stmt ParseFunDeclaration()
@@ -323,6 +344,10 @@ internal class Parser
             {
                 return new Expr.AssignmentExpr(ve.Identifier, val);
             }
+            else if (expr is Expr.PropertyAccessExpr getter)
+            {
+                return new Expr.PropertyAssignmentExpr(getter.Object, getter.Identifier, val);
+            }
 
             throw ReportAndCreateError(equals, "Invalid assignment target");
         }
@@ -427,14 +452,26 @@ internal class Parser
 
     private Expr ParseCall()
     {
-        var callee = ParsePrimary();
+        var expr = ParsePrimary();
 
-        while(Match(TokenType.ParenStart))
+        while(true)
         {
-            callee = FinishCall(callee);
+            if (Match(TokenType.ParenStart))
+            {
+                expr = FinishCall(expr);
+            }
+            else if(Match(TokenType.Dot))
+            {
+                var id = Consume(TokenType.Identifier, "Expected property name after '.'");
+                expr = new Expr.PropertyAccessExpr(expr, id);
+            }
+            else
+            {
+                break;
+            }
         }
 
-        return callee;
+        return expr;
     }
 
     private Expr FinishCall(Expr callee)
@@ -479,6 +516,11 @@ internal class Parser
         if (Match(TokenType.False))
         {
             return new Expr.LiteralExpr(false);
+        }
+
+        if (Match(TokenType.This))
+        {
+            return new Expr.ThisExpr(Previous());
         }
 
         if (Match(TokenType.String, TokenType.Number))

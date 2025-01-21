@@ -38,6 +38,7 @@ public enum TokenType
     Else,
     While,
     Return,
+    This,
     // special
     Identifier,
     Semicolon,

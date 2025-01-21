@@ -32,6 +32,7 @@ internal class Scanner
         {  "while", TokenType.While },
         {  "for", TokenType.For },
         {  "return", TokenType.Return },
+        {  "this", TokenType.This },
     };
 
     public Scanner(Reporter reporter)
