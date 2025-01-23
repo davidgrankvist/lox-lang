@@ -184,6 +184,10 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
     public string VisitClassStmt(Stmt.ClassStmt stmt)
     {
         var result = "class " + stmt.Identifier.Text;
+        if (stmt.SuperClass != null)
+        {
+            result += " < " + stmt.SuperClass.Identifier.Text;
+        }
 
         foreach (var m in stmt.Methods)
         {
@@ -207,5 +211,10 @@ internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
     public string VisitThisExpr(Expr.ThisExpr expr)
     {
         return "this";
+    }
+
+    public string VisitSuperExpr(Expr.SuperExpr expr)
+    {
+        return "super." + expr.Method.Text;
     }
 }

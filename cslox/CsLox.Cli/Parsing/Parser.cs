@@ -89,8 +89,7 @@ internal class Parser
 
     private Stmt ParseVarDeclaration()
     {
-        Consume(TokenType.Identifier, "Expected identifier");
-        var id = Previous();
+        var id = Consume(TokenType.Identifier, "Expected identifier");
 
         Expr expr = null;
         if (Match(TokenType.Equal))
@@ -105,8 +104,15 @@ internal class Parser
 
     private Stmt ParseClass()
     {
-        Consume(TokenType.Identifier, "Expected class identifier");
-        var id = Previous();
+        var id = Consume(TokenType.Identifier, "Expected class identifier");
+
+        Expr.VariableExpr superClass = null;
+        if (Match(TokenType.Less))
+        {
+            var superClassId = Consume(TokenType.Identifier, "Expected superclass identifier");
+            superClass = new Expr.VariableExpr(superClassId);
+        }
+
         Consume(TokenType.CurlyStart, "Expected '{'");
         List<Stmt.FunDeclarationStmt> methods = [];
         while (!Check(TokenType.CurlyEnd) && !IsDone())
@@ -116,7 +122,7 @@ internal class Parser
         }
         Consume(TokenType.CurlyEnd, "Expected '}'");
 
-        return new Stmt.ClassStmt(id, methods);
+        return new Stmt.ClassStmt(id, superClass, methods);
     }
 
     private Stmt ParseFunDeclaration()
@@ -516,6 +522,14 @@ internal class Parser
         if (Match(TokenType.False))
         {
             return new Expr.LiteralExpr(false);
+        }
+
+        if (Match(TokenType.Super))
+        {
+            var keyword = Previous();
+            Consume(TokenType.Dot, "Expected '.' after super");
+            var method = Consume(TokenType.Identifier, "Expected method after super");
+            return new Expr.SuperExpr(keyword, method);
         }
 
         if (Match(TokenType.This))

@@ -65,6 +65,11 @@ internal class InterpreterEnvironment
         return variables["this"];
     }
 
+    public object GetThisAt(int distance)
+    {
+        return Ancestor(distance).GetThis();
+    }
+
     private InterpreterEnvironment Ancestor(int distance)
     {
         var current = this;

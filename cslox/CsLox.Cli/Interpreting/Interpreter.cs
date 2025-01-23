@@ -331,14 +331,32 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
     {
         environment.Declare(stmt.Identifier.Text, null);
 
+        LoxClass super = null;
+        if (stmt.SuperClass != null)
+        {
+            var superClass = VisitVariableExpr(stmt.SuperClass);
+            if (superClass is not LoxClass lc)
+            {
+                throw new RuntimeError(stmt.SuperClass.Identifier, "A class can only inherit from a class");
+            }
+            super = lc;
+
+            environment = new InterpreterEnvironment(environment);
+            environment.Declare("super", super);
+        }
+
         var methods = new Dictionary<string, LoxFunction>();
         foreach (var decl in stmt.Methods)
         {
             var m = new LoxFunction(decl, environment, decl.Identifier.Text == "init");
             methods[decl.Identifier.Text] = m;
         }
-        var clazz = new LoxClass(stmt.Identifier, methods);
+        var clazz = new LoxClass(stmt.Identifier, super, methods);
 
+        if (super != null)
+        {
+            environment = environment.Parent;
+        }
         environment.Assign(stmt.Identifier, clazz);
         return null;
     }
@@ -462,5 +480,20 @@ internal class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
     public void ResolveLocalVariable(Expr expr, int depth)
     {
         locals[expr] = depth;
+    }
+
+    public object VisitSuperExpr(Expr.SuperExpr expr)
+    {
+        var distance = locals[expr];
+        var superClass = (LoxClass)environment.GetAt(expr.Keyword, distance);
+        var instance = (LoxInstance)environment.GetThisAt(distance - 1);
+        var method = superClass.FindMethod(expr.Method.Text);
+
+        if (method == null)
+        {
+            throw new RuntimeError(expr.Method, "Undefined method");
+        }
+
+        return method.Bind(instance);
     }
 }

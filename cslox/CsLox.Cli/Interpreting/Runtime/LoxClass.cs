@@ -5,11 +5,13 @@ namespace CsLox.Cli.Interpreting.Runtime;
 internal class LoxClass : ICallableFunction
 {
     public Token Identifier { get; }
+    private readonly LoxClass superClass;
     private readonly Dictionary<string, LoxFunction> methods;
 
-    public LoxClass(Token identifier, Dictionary<string, LoxFunction> methods)
+    public LoxClass(Token identifier, LoxClass superClass, Dictionary<string, LoxFunction> methods)
     {
         Identifier = identifier;
+        this.superClass = superClass;
         this.methods = methods;
     }
 
@@ -40,11 +42,16 @@ internal class LoxClass : ICallableFunction
 
     public LoxFunction FindMethod(string name)
     {
+        LoxFunction result = null;
         if (methods.TryGetValue(name, out var method))
         {
-            return method;
+            result = method;
         }
-        return null;
+        else if (superClass != null)
+        {
+            result = superClass.FindMethod(name);
+        }
+        return result;
     }
 
     private LoxFunction GetConstructor()

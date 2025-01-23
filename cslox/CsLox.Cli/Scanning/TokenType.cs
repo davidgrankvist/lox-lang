@@ -32,13 +32,14 @@ public enum TokenType
     Fun,
     Class,
     Print,
+    This,
+    Super,
     // keywords - control flow
     For,
     If,
     Else,
     While,
     Return,
-    This,
     // special
     Identifier,
     Semicolon,

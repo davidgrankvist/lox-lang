@@ -165,13 +165,15 @@ public abstract class Stmt
     }
     public class ClassStmt : Stmt
     {
-        public ClassStmt(Token Identifier, List<Stmt.FunDeclarationStmt> Methods)
+        public ClassStmt(Token Identifier, Expr.VariableExpr SuperClass, List<Stmt.FunDeclarationStmt> Methods)
         {
             this.Identifier = Identifier;
+            this.SuperClass = SuperClass;
             this.Methods = Methods;
         }
 
         public readonly Token Identifier;
+        public readonly Expr.VariableExpr SuperClass;
         public readonly List<Stmt.FunDeclarationStmt> Methods;
 
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)

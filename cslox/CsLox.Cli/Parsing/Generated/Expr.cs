@@ -20,6 +20,7 @@ public abstract class Expr
         TResult VisitPropertyAccessExpr(PropertyAccessExpr expr);
         TResult VisitPropertyAssignmentExpr(PropertyAssignmentExpr expr);
         TResult VisitThisExpr(ThisExpr expr);
+        TResult VisitSuperExpr(SuperExpr expr);
     }
 
     public abstract TResult Accept<TResult>(IVisitor<TResult> visitor);
@@ -198,6 +199,22 @@ public abstract class Expr
         public override TResult Accept<TResult>(IVisitor<TResult> visitor)
         {
             return visitor.VisitThisExpr(this);
+        }
+    }
+    public class SuperExpr : Expr
+    {
+        public SuperExpr(Token Keyword, Token Method)
+        {
+            this.Keyword = Keyword;
+            this.Method = Method;
+        }
+
+        public readonly Token Keyword;
+        public readonly Token Method;
+
+        public override TResult Accept<TResult>(IVisitor<TResult> visitor)
+        {
+            return visitor.VisitSuperExpr(this);
         }
     }
 

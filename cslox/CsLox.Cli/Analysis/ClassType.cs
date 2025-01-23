@@ -3,4 +3,5 @@ internal enum ClassType
 {
     None,
     Class,
+    SubClass,
 }

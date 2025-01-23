@@ -260,6 +260,20 @@ internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
         Declare(stmt.Identifier);
         Define(stmt.Identifier);
 
+        if (stmt.SuperClass != null)
+        {
+            currentClass = ClassType.SubClass;
+            if (stmt.SuperClass.Identifier.Text == stmt.Identifier.Text)
+            {
+                reporter.Error(stmt.SuperClass.Identifier, "A class can not inherit from itself");
+            }
+
+            VisitVariableExpr(stmt.SuperClass);
+
+            BeginScope();
+            scopes.Peek().Add("super", true);
+        }
+
         BeginScope();
         scopes.Peek().Add("this", true);
 
@@ -270,6 +284,10 @@ internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
         }
 
         EndScope();
+        if (stmt.SuperClass != null)
+        {
+            EndScope();
+        }
         currentClass = currClass;
         return null;
     }
@@ -289,14 +307,24 @@ internal class Resolver : Expr.IVisitor<object>, Stmt.IVisitor<object>
 
     public object VisitThisExpr(Expr.ThisExpr expr)
     {
-        if (currentClass == ClassType.Class)
+        if (currentClass == ClassType.Class || currentClass == ClassType.SubClass)
         {
             VisitLocalVariable(expr, expr.Keyword.Text);
         }
         else
         {
-            reporter.Error(expr.Keyword, "Can only access 'this' within a class");
+            reporter.Error(expr.Keyword, "Can only use 'this' in a class");
         }
+        return null;
+    }
+
+    public object VisitSuperExpr(Expr.SuperExpr expr)
+    {
+        if (currentClass != ClassType.SubClass)
+        {
+            reporter.Error(expr.Keyword, "Can only use 'super' in a subclass");
+        }
+        VisitLocalVariable(expr, expr.Keyword.Text);
         return null;
     }
 }

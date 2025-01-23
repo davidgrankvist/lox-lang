@@ -33,6 +33,7 @@ internal class Scanner
         {  "for", TokenType.For },
         {  "return", TokenType.Return },
         {  "this", TokenType.This },
+        {  "super", TokenType.Super },
     };
 
     public Scanner(Reporter reporter)
