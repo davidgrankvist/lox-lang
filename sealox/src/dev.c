@@ -1,0 +1,64 @@
+#include <stdio.h>
+#include "dev.h"
+
+void disas_ops(Ops* ops, const char* name) {
+   printf("-- %s --\n", name); 
+
+   for (int pos = 0; pos < ops->count;) {
+        pos = disas_op_at(ops, pos);
+   }
+}
+
+int disas_simple(const char* name, int pos) {
+    printf("%s\n", name);
+    return pos + 1;
+}
+
+int disas_const(const char* name, int pos, Ops* ops) {
+    uint8_t i_constant = ops->ops[pos + 1];
+    Val val = ops->constants.vals[i_constant];
+    printf("%s %4d ", name, i_constant);
+    print_val(val);
+    printf("\n");
+    return pos + 2;
+}
+
+void print_val(Val val) {
+   printf("%g", val); 
+}
+
+int disas_op_at(Ops* ops, int pos) {
+    int line = ops->lines[pos];
+    printf("%04d %4d ", pos, line);
+
+    uint8_t op = ops->ops[pos];
+    int next_pos = pos;
+
+    switch (op) {
+        case OP_RETURN:
+            next_pos = disas_simple("OP_RETURN", pos);
+            break;
+        case OP_CONST:
+            next_pos = disas_const("OP_CONST", pos, ops);
+            break;
+        case OP_NEGATE:
+            next_pos = disas_simple("OP_NEGATE", pos);
+            break;
+        case OP_ADD:
+            next_pos = disas_simple("OP_ADD", pos);
+            break;
+        case OP_SUBTRACT:
+            next_pos = disas_simple("OP_SUBTRACT", pos);
+            break;
+        case OP_MULTIPLY:
+            next_pos = disas_simple("OP_MULTIPLY", pos);
+            break;
+        case OP_DIVIDE:
+            next_pos = disas_simple("OP_DIVIDE", pos);
+            break;
+        default:
+            printf("Unknown op code %d\n", op);
+            next_pos++;
+    }
+    return next_pos;
+}
