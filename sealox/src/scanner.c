@@ -21,7 +21,7 @@ bool at_end() {
     return *scanner.current == '\0'; 
 }
 
-char advance() {
+static char advance() {
     return *scanner.current++;
 }
 

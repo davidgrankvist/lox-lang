@@ -11,7 +11,6 @@
         Val a = pop_val(); \
         push_val(a o b); \
     } while(false)
-        
 
 VmState vm;
 
@@ -35,12 +34,6 @@ Val pop_val() {
    vm.top--;
    return *vm.top;
 }
-
-IntrResult interpret(char* program) {
-    compile(program);
-    return INTR_OK; 
-}
-
 
 static IntrResult run() {
     bool keep_going = true;
@@ -93,4 +86,22 @@ IntrResult run_ops(Ops* ops) {
     vm.ops = ops;
     vm.pc = vm.ops->ops; 
     return run();
+}
+
+IntrResult interpret(char* program) {
+    Ops ops;
+    init_ops(&ops);
+
+    if (!compile(program, &ops)) {
+        free_ops(&ops);
+        return INTR_COMP_ERR;
+    }
+
+    vm.ops = &ops;
+    vm.pc = vm.ops->ops;
+
+    IntrResult result = run();
+
+    free_ops(&ops);
+    return result;
 }

@@ -1,6 +1,8 @@
 #ifndef compiler_h
 #define compiler_h
 
-void compile(const char* program);
+#include "ops.h"
+
+bool compile(const char* program, Ops* ops);
 
 #endif
