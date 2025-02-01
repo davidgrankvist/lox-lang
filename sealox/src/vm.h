@@ -22,7 +22,8 @@ typedef enum {
 
 void init_vm();
 void free_vm();
-IntrResult interpret(Ops* ops);
+IntrResult interpret(char* program);
+IntrResult run_ops(Ops* ops);
 
 void push_val(Val val);
 Val pop();

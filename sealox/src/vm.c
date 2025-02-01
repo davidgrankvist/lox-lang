@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "vm.h"
 #include "dev.h"
+#include "compiler.h"
 
 #define CONSUME_OP() (*vm.pc++)
 #define CONSUME_CONST() (vm.ops->constants.vals[CONSUME_OP()])
@@ -34,6 +35,12 @@ Val pop_val() {
    vm.top--;
    return *vm.top;
 }
+
+IntrResult interpret(char* program) {
+    compile(program);
+    return INTR_OK; 
+}
+
 
 static IntrResult run() {
     bool keep_going = true;
@@ -82,7 +89,7 @@ static IntrResult run() {
     return INTR_OK;
 }
 
-IntrResult interpret(Ops* ops) {
+IntrResult run_ops(Ops* ops) {
     vm.ops = ops;
     vm.pc = vm.ops->ops; 
     return run();

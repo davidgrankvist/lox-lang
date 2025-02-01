@@ -1,48 +1,68 @@
-#include "ops.h"
-#include "dev.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "vm.h"
 
-int main() {
+void repl() {
+    char line[1024];
+
+    while(true) {
+       printf("> "); 
+       if (!fgets(line, sizeof(line), stdin)) {
+            printf("\n");
+            break;
+       }
+
+       interpret(line);
+    }
+}
+
+char* read_file(const char* file_name) {
+    FILE* file = fopen(file_name, "rb");
+    if (file == NULL) {
+        fprintf(stderr, "Unable to open file \"%s\"\n", file_name);
+        exit(1);
+    }
+
+    fseek(file, 0L, SEEK_END);
+    size_t s = ftell(file);
+    rewind(file);
+
+    char* buffer = (char*)malloc(s + 1);
+    if (buffer == NULL) {
+        fprintf(stderr, "Not enough memory to read \"%s\"\n", file_name);
+        exit(1);
+    }
+    size_t b_read = fread(buffer, sizeof(char), s, file);
+    if (b_read < s) {
+        fprintf(stderr, "Unable to read file \"%s\"\n", file_name);
+        exit(1);
+    }
+    buffer[b_read] = '\0';
+
+    fclose(file);
+    return buffer;
+}
+
+void run_file(const char* file) {
+    char* program = read_file(file); 
+    IntrResult result = interpret(program);
+    free(program);
+
+    if (result != INTR_OK) {
+        exit(1);
+    }
+}
+
+int main(int argc, const char* argv[]) {
     init_vm();
 
-    Ops ops;
-    init_ops(&ops);
-
-    // 5.3 + 2 = 7.3
-    int i_constant = append_const(&ops, 5.3);
-    append_op(&ops, OP_CONST, 1);
-    append_op(&ops, i_constant, 1);
-    i_constant = append_const(&ops, 2);
-    append_op(&ops, OP_CONST, 1);
-    append_op(&ops, i_constant, 1);
-    append_op(&ops, OP_ADD, 1);
-
-    // 7.3 - 1 = 6.3
-    i_constant = append_const(&ops, 1);
-    append_op(&ops, OP_CONST, 1);
-    append_op(&ops, i_constant, 1);
-    append_op(&ops, OP_SUBTRACT, 1);
-
-    // 6.3 / 2 = 3.15
-    i_constant = append_const(&ops, 2);
-    append_op(&ops, OP_CONST, 1);
-    append_op(&ops, i_constant, 1);
-    append_op(&ops, OP_DIVIDE, 1);
-
-    // 3.15 * 3 = 9.45
-    i_constant = append_const(&ops, 3);
-    append_op(&ops, OP_CONST, 1);
-    append_op(&ops, i_constant, 1);
-    append_op(&ops, OP_MULTIPLY, 1);
-
-    // -9.45
-    append_op(&ops, OP_NEGATE, 1);
-
-    append_op(&ops, OP_RETURN, 1);
-
-    interpret(&ops);
+    if (argc > 1) {
+        run_file(argv[1]);
+    } else {
+        repl();
+    }
 
     free_vm();
-    free_ops(&ops);
     return 0;
 }
