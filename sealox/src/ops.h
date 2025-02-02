@@ -6,14 +6,44 @@
 typedef enum {
     OP_RETURN,
     OP_CONST,
+    OP_NIL,
+    OP_TRUE,
+    OP_FALSE,
     OP_NEGATE,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
-    OP_DIVIDE
+    OP_DIVIDE,
+    OP_NOT,
+    OP_EQUAL,
+    OP_GREATER,
+    OP_LESS
 } OpCode;
 
-typedef double Val;
+typedef enum {
+    VAL_BOOL,
+    VAL_NIL,
+    VAL_NUM
+} ValType;
+
+typedef struct {
+    ValType type;
+    union {
+        bool boolean;
+        double number;
+    } unwrap;
+} Val;
+
+#define MK_BOOL_VAL(b) ((Val){VAL_BOOL, { .boolean = b }})
+#define MK_NUM_VAL(n) ((Val){VAL_NUM, { .number = n }})
+#define MK_NIL_VAL ((Val){VAL_NIL, { .number = 0 }})
+
+#define IS_BOOL(v) ((v).type == VAL_BOOL)
+#define IS_NUM(v) ((v).type == VAL_NUM)
+#define IS_NIL(v) ((v).type == VAL_NIL)
+
+#define UNWRAP_BOOL(v) ((v).unwrap.boolean)
+#define UNWRAP_NUM(v) ((v).unwrap.number)
 
 typedef struct {
     int count;

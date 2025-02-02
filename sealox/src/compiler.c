@@ -134,8 +134,23 @@ void emit_const(Val val) {
 }
 
 void parse_num() {
-   double val = strtod(parser.prev.start, NULL); 
-   emit_const(val);
+    double val = strtod(parser.prev.start, NULL); 
+    emit_const(MK_NUM_VAL(val));
+}
+
+void parse_bool() {
+    switch(parser.prev.type) {
+        case TOKEN_TRUE:
+            emit(OP_TRUE);
+            break;
+        case TOKEN_FALSE:
+            emit(OP_FALSE);
+            break;
+    }
+}
+
+void parse_nil() {
+    emit(OP_NIL);
 }
 
 static void parse_prec(Prec prec) {
@@ -172,6 +187,9 @@ void parse_unary() {
         case TOKEN_MINUS:
             emit(OP_NEGATE);
             break;
+        case TOKEN_BANG:
+            emit(OP_NOT);
+            break;
     }
 }
 
@@ -192,6 +210,27 @@ void parse_binary() {
             break;
         case TOKEN_SLASH:
             emit(OP_DIVIDE);
+            break;
+        case TOKEN_EQUAL_EQUAL:
+            emit(OP_EQUAL);
+            break;
+        case TOKEN_BANG_EQUAL:
+            // a != b -> !(a == b)
+            emit2(OP_EQUAL, OP_NOT);
+            break;
+        case TOKEN_LESS:
+            emit(OP_LESS);
+            break;
+        case TOKEN_LESS_EQUAL:
+            // a <= b -> !(a > b)
+            emit2(OP_GREATER, OP_NOT);
+            break;
+        case TOKEN_GREATER:
+            emit(OP_GREATER);
+            break;
+        case TOKEN_GREATER_EQUAL:
+            // a >= b -> !(a < b)
+            emit2(OP_LESS, OP_NOT);
             break;
     }
 }
@@ -214,27 +253,27 @@ bool compile(const char* program, Ops* ops) {
 Rule rules[] = {
     [TOKEN_NUMBER]          = {parse_num, NULL, P_NONE},
     [TOKEN_STRING]          = {NULL, NULL, P_NONE},
-    [TOKEN_TRUE]            = {NULL, NULL, P_NONE},
-    [TOKEN_FALSE]           = {NULL, NULL, P_NONE},
+    [TOKEN_TRUE]            = {parse_bool, NULL, P_NONE},
+    [TOKEN_FALSE]           = {parse_bool, NULL, P_NONE},
     [TOKEN_PLUS]            = {NULL, parse_binary, P_TERM},
     [TOKEN_MINUS]           = {parse_unary, parse_binary, P_TERM},
     [TOKEN_STAR]            = {NULL, parse_binary, P_FACTOR},
     [TOKEN_SLASH]           = {NULL, parse_binary, P_FACTOR},
-    [TOKEN_BANG]            = {NULL, NULL, P_NONE},
+    [TOKEN_BANG]            = {parse_unary, NULL, P_NONE},
     [TOKEN_EQUAL]           = {NULL, NULL, P_NONE},
-    [TOKEN_EQUAL_EQUAL]     = {NULL, NULL, P_NONE},
-    [TOKEN_BANG_EQUAL]      = {NULL, NULL, P_NONE},
-    [TOKEN_LESS]            = {NULL, NULL, P_NONE},
-    [TOKEN_LESS_EQUAL]      = {NULL, NULL, P_NONE},
-    [TOKEN_GREATER]         = {NULL, NULL, P_NONE},
-    [TOKEN_GREATER_EQUAL]   = {NULL, NULL, P_NONE},
+    [TOKEN_EQUAL_EQUAL]     = {NULL, parse_binary, P_EQ},
+    [TOKEN_BANG_EQUAL]      = {NULL, parse_binary, P_EQ},
+    [TOKEN_LESS]            = {NULL, parse_binary, P_COMP},
+    [TOKEN_LESS_EQUAL]      = {NULL, parse_binary, P_COMP},
+    [TOKEN_GREATER]         = {NULL, parse_binary, P_COMP},
+    [TOKEN_GREATER_EQUAL]   = {NULL, parse_binary, P_COMP},
     [TOKEN_PAREN_START]     = {parse_group, NULL, P_NONE},
     [TOKEN_PAREN_END]       = {NULL, NULL, P_NONE},
     [TOKEN_CURLY_START]     = {NULL, NULL, P_NONE},
     [TOKEN_CURLY_END]       = {NULL, NULL, P_NONE},
     [TOKEN_AND]             = {NULL, NULL, P_NONE},
     [TOKEN_OR]              = {NULL, NULL, P_NONE},
-    [TOKEN_NIL]             = {NULL, NULL, P_NONE},
+    [TOKEN_NIL]             = {parse_nil, NULL, P_NONE},
     [TOKEN_VAR]             = {NULL, NULL, P_NONE},
     [TOKEN_FUN]             = {NULL, NULL, P_NONE},
     [TOKEN_CLASS]           = {NULL, NULL, P_NONE},

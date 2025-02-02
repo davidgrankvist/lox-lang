@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "dev.h"
+#include "ops.h"
 
 void disas_ops(Ops* ops, const char* name) {
    printf("-- %s --\n", name); 
@@ -24,7 +25,15 @@ int disas_const(const char* name, int pos, Ops* ops) {
 }
 
 void print_val(Val val) {
-   printf("%g", val); 
+    if (IS_NUM(val)) {
+        printf("%g", UNWRAP_NUM(val));
+    } else if(IS_BOOL(val)) {
+        printf("%s", UNWRAP_BOOL(val) ? "true" : "false");
+    } else if(IS_NIL(val)) {
+        printf("nil");
+    } else {
+        printf("<unknown val>");
+    }
 }
 
 int disas_op_at(Ops* ops, int pos) {
@@ -41,6 +50,15 @@ int disas_op_at(Ops* ops, int pos) {
         case OP_CONST:
             next_pos = disas_const("OP_CONST", pos, ops);
             break;
+        case OP_TRUE:
+            next_pos = disas_simple("OP_TRUE", pos);
+            break;
+        case OP_FALSE:
+            next_pos = disas_simple("OP_FALSE", pos);
+            break;
+        case OP_NIL:
+            next_pos = disas_simple("OP_NIL", pos);
+            break;
         case OP_NEGATE:
             next_pos = disas_simple("OP_NEGATE", pos);
             break;
@@ -55,6 +73,18 @@ int disas_op_at(Ops* ops, int pos) {
             break;
         case OP_DIVIDE:
             next_pos = disas_simple("OP_DIVIDE", pos);
+            break;
+        case OP_NOT:
+            next_pos = disas_simple("OP_NOT", pos);
+            break;
+        case OP_EQUAL:
+            next_pos = disas_simple("OP_EQUAL", pos);
+            break;
+        case OP_LESS:
+            next_pos = disas_simple("OP_LESS", pos);
+            break;
+        case OP_GREATER:
+            next_pos = disas_simple("OP_GREATER", pos);
             break;
         default:
             printf("Unknown op code %d\n", op);

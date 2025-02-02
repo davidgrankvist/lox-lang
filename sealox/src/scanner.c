@@ -105,12 +105,12 @@ bool is_alpha(char c) {
 }
 
 Token mk_number() {
-    while(is_alpha(peek())) {
+    while(is_digit(peek())) {
         advance();
     }
     if (peek() == '.') {
         advance();
-        while(is_alpha(peek())) {
+        while(is_digit(peek())) {
             advance();
         }
     }
