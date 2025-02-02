@@ -24,6 +24,19 @@ int disas_const(const char* name, int pos, Ops* ops) {
     return pos + 2;
 }
 
+void print_obj(Val val) {
+    switch(OBJ_TYPE(val)) {
+        case OBJ_STR: {
+            char* chars = UNWRAP_STR_CHARS(val);
+            printf("%s", chars); 
+            break;
+        }
+        default:
+            printf("<unknown obj>"); 
+            break;
+    }
+}
+
 void print_val(Val val) {
     if (IS_NUM(val)) {
         printf("%g", UNWRAP_NUM(val));
@@ -31,6 +44,8 @@ void print_val(Val val) {
         printf("%s", UNWRAP_BOOL(val) ? "true" : "false");
     } else if(IS_NIL(val)) {
         printf("nil");
+    } else if(IS_OBJ(val)) {
+        print_obj(val);    
     } else {
         printf("<unknown val>");
     }

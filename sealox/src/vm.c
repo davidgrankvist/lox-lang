@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 #include "vm.h"
 #include "dev.h"
 #include "compiler.h"
 #include "ops.h"
+#include "memory.h"
 
 #define CONSUME_OP() (*vm.pc++)
 #define CONSUME_CONST() (vm.ops->constants.vals[CONSUME_OP()])
@@ -74,9 +76,31 @@ bool are_equal(Val a, Val b) {
             return UNWRAP_BOOL(a) == UNWRAP_BOOL(b);
         case VAL_NUM:
             return UNWRAP_NUM(a) == UNWRAP_NUM(b);
+        case VAL_OBJ: {
+            ObjStr* a_str = UNWRAP_STR(a);
+            ObjStr* b_str = UNWRAP_STR(b);
+            return a_str->length == b_str->length
+                && memcmp(a_str->chars, b_str->chars, a_str->length) == 0;
+        }
         default:
             return false;
     }
+}
+
+void concat() {
+    Val b = pop_val();  
+    Val a = pop_val();  
+    ObjStr* a_str = UNWRAP_STR(a);
+    ObjStr* b_str = UNWRAP_STR(b);
+
+    int length = a_str->length + b_str->length;
+    char* new_str = REALLOC_ARR(char, NULL, length + 1);
+    memcpy(new_str, a_str->chars, a_str->length);
+    memcpy(new_str + a_str->length, b_str->chars, b_str->length);
+    new_str[length] = '\0';
+
+    ObjStr* result = alloc_str(new_str, length);
+    push_val(MK_OBJ_VAL((Obj*)result));
 }
 
 static IntrResult run() {
@@ -123,7 +147,11 @@ static IntrResult run() {
                 push_val(MK_BOOL_VAL(is_falsey(pop_val())));
                 break;
             case OP_ADD: 
-                BINARY_OP(MK_NUM_VAL, +);
+                if (IS_STR(peek_val(0)) && IS_STR(peek_val(1))) {
+                    concat();
+                } else {
+                    BINARY_OP(MK_NUM_VAL, +);
+                }
                 break;
             case OP_SUBTRACT: 
                 BINARY_OP(MK_NUM_VAL, -);

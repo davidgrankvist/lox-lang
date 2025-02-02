@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "common.h"
 #include "compiler.h"
 #include "scanner.h"
+#include "memory.h"
 #ifdef DEBUG_COMP
 #include "dev.h"
 #endif
@@ -235,6 +237,17 @@ void parse_binary() {
     }
 }
 
+ObjStr* cp_str(const char* start, int length) {
+    char* new_str = REALLOC_ARR(char, NULL, length + 1);
+    memcpy(new_str, start, length);
+    new_str[length] = '\0';
+    return alloc_str(new_str, length);
+}
+
+void parse_str() {
+    emit_const(MK_OBJ_VAL((Obj*)cp_str(parser.prev.start + 1, parser.prev.length - 2)));
+}
+
 bool compile(const char* program, Ops* ops) {
     init_scanner(program); 
     ops_ptr = ops;
@@ -252,7 +265,7 @@ bool compile(const char* program, Ops* ops) {
 // mapping from tokens to rules
 Rule rules[] = {
     [TOKEN_NUMBER]          = {parse_num, NULL, P_NONE},
-    [TOKEN_STRING]          = {NULL, NULL, P_NONE},
+    [TOKEN_STRING]          = {parse_str, NULL, P_NONE},
     [TOKEN_TRUE]            = {parse_bool, NULL, P_NONE},
     [TOKEN_FALSE]           = {parse_bool, NULL, P_NONE},
     [TOKEN_PLUS]            = {NULL, parse_binary, P_TERM},
