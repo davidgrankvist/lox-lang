@@ -24,8 +24,9 @@ typedef enum {
     OBJ_STR 
 } ObjType;
 
-typedef struct {
+typedef struct Obj {
     ObjType type; 
+    struct Obj* next;
 } Obj;
 
 typedef struct {
@@ -96,7 +97,5 @@ void free_vals(Vals* vals);
 void append_val(Vals* vals, Val val);
 
 int append_const(Ops* ops, Val val);
-
-ObjStr* alloc_str(char* start, int length);
 
 #endif

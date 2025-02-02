@@ -28,9 +28,11 @@ void reset_stack() {
 
 void init_vm() {
     reset_stack();
+    vm.objects = NULL;
 }
 
 void free_vm() {
+    free_objects();
 }
 
 void push_val(Val val) {

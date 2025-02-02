@@ -237,13 +237,6 @@ void parse_binary() {
     }
 }
 
-ObjStr* cp_str(const char* start, int length) {
-    char* new_str = REALLOC_ARR(char, NULL, length + 1);
-    memcpy(new_str, start, length);
-    new_str[length] = '\0';
-    return alloc_str(new_str, length);
-}
-
 void parse_str() {
     emit_const(MK_OBJ_VAL((Obj*)cp_str(parser.prev.start + 1, parser.prev.length - 2)));
 }

@@ -53,21 +53,3 @@ int append_const(Ops* ops, Val val) {
     return ops->constants.count - 1;
 }
 
-Obj* allocate_obj (size_t size, ObjType type) {
-    Obj* obj = (Obj*)realloc_arr(NULL, size);
-    obj->type = type;
-
-    return obj;
-}
-
-#define ALLOCATE_OBJ(type, otype) \
-    (type*)allocate_obj(sizeof(type), otype)
-
-ObjStr* alloc_str(char* start, int length) {
-    ObjStr* str = ALLOCATE_OBJ(ObjStr, OBJ_STR);
-    str->length = length;
-    str->chars = start;
-
-    return str;
-}
-

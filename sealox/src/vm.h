@@ -12,7 +12,10 @@ typedef struct {
     uint8_t* pc;
     Val stack[STACK_SIZE];
     Val* top;
+    Obj* objects;
 } VmState;
+
+extern VmState vm;
 
 typedef enum {
     INTR_OK,
