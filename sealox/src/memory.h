@@ -17,6 +17,11 @@ void* realloc_arr(void* ptr, size_t new_cap);
 ObjStr* alloc_str(char* start, int length);
 ObjStr* cp_str(const char* start, int length);
 
+/*
+ * Primarily for testing. Create a string object without modifying and GC state
+ */
+ObjStr* alloc_str_no_gc(char* start, int length);
+
 void free_objects();
 
 #endif

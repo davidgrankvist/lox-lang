@@ -6,6 +6,10 @@ TARGET = $(BIN_DIR)/sealox
 CC = gcc
 CFLAGS = -g
 
+TEST_SRC = $(wildcard test/*.c)
+TEST_TARGET = $(BIN_DIR)/test_runner
+TEST_INCLUDE_SRC = $(filter-out src/main.c, $(SRC))
+
 build: $(TARGET)
 
 $(TARGET): $(SRC)
@@ -18,10 +22,21 @@ clean:
 run:
 	./$(TARGET)
 
+build_test: $(SRC) $(TEST_SRC)
+	$(CC) $(TEST_SRC) $(TEST_INCLUDE_SRC) $(CFLAGS) -o $(TEST_TARGET)
+
+build_and_test: $(SRC) $(TEST_SRC)
+	$(CC) $(TEST_SRC) $(TEST_INCLUDE_SRC) $(CFLAGS) -o $(TEST_TARGET)
+	./$(TEST_TARGET)
+
 r: run
 
 b: build
 
 br: build run
 
-.PHONY: build clean run r b br
+t: build_and_test
+
+bt: build_test
+
+.PHONY: build clean run test build_test r b br t bt
