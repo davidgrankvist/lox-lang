@@ -4,6 +4,7 @@
 #include "common.h"
 #include "ops.h"
 #include "dev.h"
+#include "dict.h"
 
 #define STACK_SIZE 256
 
@@ -12,6 +13,7 @@ typedef struct {
     uint8_t* pc;
     Val stack[STACK_SIZE];
     Val* top;
+    Dict strings;
     Obj* objects;
 } VmState;
 

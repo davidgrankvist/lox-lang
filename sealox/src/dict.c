@@ -1,3 +1,4 @@
+#include <string.h>
 #include "dict.h"
 #include "memory.h"
 
@@ -10,21 +11,18 @@ DictEntry* dict_find_entry(Dict* dict, ObjStr* key) {
         return NULL;
     }
 
-    int x = key->hash;
     int i_target = (key->hash) % cap;
     for (int i = 0; i < cap; i++) {
         DictEntry* target = &dict->entries[i_target];
 
-        /*
-         * We can stop the probing sequence when we hit an empty slot,
-         * because conflicts result in a sequence of occupied slots
-         * (possibly tombstones).
-         */
         if (IS_EMPTY_SLOT(target)) {
             return NULL;
         }
 
-        // TODO: compare by value
+        /*
+         * Comparing by reference is OK here, because
+         * we assume that strings are deduplicated.
+         */
         if (target->key == key) {
             return target;
         }
@@ -126,4 +124,28 @@ bool dict_del(Dict* dict, ObjStr* key) {
     match->val = MK_BOOL_VAL(true);
 
     return true;
+}
+
+ObjStr* dict_get_str(Dict* dict, const char* start, int length, uint32_t hash) {
+    int cap = dict->capacity;
+    if (cap == 0) {
+        return NULL;
+    }
+
+    int i_target = hash % cap;
+    for (int i = 0; i < cap; i++) {
+        DictEntry* target = &dict->entries[i_target];
+
+        if (IS_EMPTY_SLOT(target)) {
+            return NULL;
+        }
+
+        if (target->key->hash == hash 
+                && memcmp(target->key->chars, start, length) == 0) {
+            return target->key;
+        }
+
+        i_target = (i_target + 1) % cap;
+    }
+    return NULL;
 }

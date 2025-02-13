@@ -28,10 +28,12 @@ void reset_stack() {
 
 void init_vm() {
     reset_stack();
+    dict_init(&vm.strings);
     vm.objects = NULL;
 }
 
 void free_vm() {
+    dict_free(&vm.strings);
     free_objects();
 }
 
@@ -101,7 +103,7 @@ void concat() {
     memcpy(new_str + a_str->length, b_str->chars, b_str->length);
     new_str[length] = '\0';
 
-    ObjStr* result = alloc_str(new_str, length);
+    ObjStr* result = take_str(new_str, length);
     push_val(MK_OBJ_VAL((Obj*)result));
 }
 

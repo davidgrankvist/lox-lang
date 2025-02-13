@@ -118,6 +118,23 @@ void test_dict_should_put_and_get_multiple_conflicting() {
     END_TEST();
 }
 
+void test_dict_should_get_str() {
+    BEGIN_TEST();
+
+    Dict dict;
+    dict_init(&dict);
+
+    Val val = MK_NIL_VAL;
+    ObjStr* key = alloc_str_no_gc("key", 3);
+
+    dict_put(&dict, key, val);
+    ObjStr* retrieved = dict_get_str(&dict, key->chars, key->length, key->hash);
+
+    ASSERT(key == retrieved, "Expected retrieved string object to be the same reference");
+
+    END_TEST();
+}
+
 void run_all_test_dict() {
     BEGIN_SUITE();
 
@@ -127,6 +144,7 @@ void run_all_test_dict() {
     test_dict_should_not_find_after_delete();
     test_dict_should_put_and_get_multiple_distinct();
     test_dict_should_put_and_get_multiple_conflicting();
+    test_dict_should_get_str();
 
     END_SUITE();
 }

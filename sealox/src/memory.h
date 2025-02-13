@@ -14,7 +14,7 @@
 
 void* realloc_arr(void* ptr, size_t new_cap);
 
-ObjStr* alloc_str(char* start, int length);
+ObjStr* take_str(char* start, int length);
 ObjStr* cp_str(const char* start, int length);
 
 /*
