@@ -20,6 +20,7 @@ void dict_free(Dict* dict);
 bool dict_get(Dict* dict, ObjStr* key, Val* val);
 bool dict_put(Dict* dict, ObjStr* key, Val val);
 bool dict_del(Dict* dict, ObjStr* key);
+bool dict_has(Dict* dict, ObjStr* key);
 
 /*
  * Look by up a string key by its value. This is to support string interning.

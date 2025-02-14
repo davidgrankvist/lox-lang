@@ -126,6 +126,11 @@ bool dict_del(Dict* dict, ObjStr* key) {
     return true;
 }
 
+bool dict_has(Dict* dict, ObjStr* key) {
+    DictEntry* match = dict_find_entry(dict, key);
+    return match != NULL;
+}
+
 ObjStr* dict_get_str(Dict* dict, const char* start, int length, uint32_t hash) {
     int cap = dict->capacity;
     if (cap == 0) {

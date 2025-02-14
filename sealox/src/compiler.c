@@ -44,6 +44,8 @@ typedef struct {
 static void parse_expr();
 static Rule* rule_of(TokenType type);
 static void parse_prec(Prec prec);
+static void parse_decl();
+static void parse_stmt();
 
 void err_at(Token* token, const char* msg) {
     if (parser.panic) {
@@ -95,9 +97,52 @@ void consume(TokenType type, char* msg) {
     err_curr(msg);
 }
 
+static bool match(TokenType type) {
+    if (parser.curr.type == type) {
+        advance();
+        return true;
+    }
+
+    return false;
+}
+
+static bool check(TokenType type) {
+    return parser.curr.type == type;
+}
+
 Ops* curr_ops() {
     return ops_ptr;
 }
+
+/*
+ * If a statement is broken, we avoid cascading errors
+ * by aborting it and searching for a new statement.
+ */
+static void synch() {
+    parser.panic = true;
+
+    while (!check(TOKEN_EOF)) {
+        // end of statement boundary
+        if (parser.prev.type == TOKEN_SEMICOLON) {
+            return;
+        }
+        // beginning of statement boundary
+        switch (parser.curr.type) {
+            case TOKEN_CLASS:
+            case TOKEN_FUN:
+            case TOKEN_VAR:
+            case TOKEN_FOR:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+                return;
+        }
+
+        advance();
+    }
+}
+
 
 void emit(uint8_t byte) {
     append_op(curr_ops(), byte, parser.prev.line);
@@ -162,13 +207,20 @@ static void parse_prec(Prec prec) {
        err("Unknown expression"); 
        return;
     }
-    fn();
+
+    bool can_assign = prec <= P_ASSIGN;
+    fn(can_assign);
 
     while (prec <= rule_of(parser.curr.type)->prec) {
         advance();
         Pfn ifn = rule_of(parser.prev.type)->infix;
         ifn();
     }
+
+    if (can_assign && match(TOKEN_EQUAL)) {
+        err("Invalid assignment target");
+    }
+
 }
 
 static void parse_expr() {
@@ -241,6 +293,75 @@ void parse_str() {
     emit_const(MK_OBJ_VAL((Obj*)cp_str(parser.prev.start + 1, parser.prev.length - 2)));
 }
 
+void parse_print() {
+    parse_expr(); 
+    consume(TOKEN_SEMICOLON, "Expected ';' at the end of print statement");
+    emit(OP_PRINT);
+}
+
+void parse_stmt() {
+    if (match(TOKEN_PRINT)) {
+        parse_print();
+    } else {
+        parse_expr();
+        consume(TOKEN_SEMICOLON, "Expected ';' at the end of statement");
+        emit(OP_POP);
+    }
+}
+
+void define_var(uint8_t i_val) {
+    emit2(OP_DEFINE_GLOBAL, i_val); 
+}
+
+uint8_t identifier_constant(Token* token) {
+    return mk_const(MK_OBJ_VAL((Obj*)cp_str(token->start, token->length)));
+}
+
+void parse_named_var(Token* token, bool can_assign) {
+    uint8_t i_val = identifier_constant(token);
+
+    if (can_assign && match(TOKEN_EQUAL)) {
+        parse_expr();
+        emit2(OP_SET_GLOBAL, i_val);
+    } else {
+        emit2(OP_GET_GLOBAL, i_val);
+    }
+}
+
+void parse_var_val(bool can_assign) {
+    parse_named_var(&parser.prev, can_assign);
+}
+
+uint8_t parse_var(char* str) {
+    consume(TOKEN_IDENTIFIER, "Expected variable identifier");
+    return identifier_constant(&parser.prev);
+}
+
+void parse_var_decl() {
+    uint8_t global = parse_var("Expected a variable name");
+
+    if (match(TOKEN_EQUAL)) {
+        parse_expr(); 
+    } else {
+        emit(OP_NIL); 
+    }
+
+    consume(TOKEN_SEMICOLON, "Expected ';' at the end of variable declaration");
+    define_var(global);
+}
+
+void parse_decl() {
+    if (match(TOKEN_VAR)) {
+        parse_var_decl();
+    } else {
+        parse_stmt();
+    }
+
+    if (parser.panic) {
+        synch();
+    }
+}
+
 bool compile(const char* program, Ops* ops) {
     init_scanner(program); 
     ops_ptr = ops;
@@ -249,7 +370,11 @@ bool compile(const char* program, Ops* ops) {
     parser.panic = false;
 
     advance();
-    parse_expr();
+
+    while (!match(TOKEN_EOF)) {
+        parse_decl();
+    }
+
     consume(TOKEN_EOF, "Expected EOF");
     end_comp();
     return !parser.err;
@@ -291,7 +416,7 @@ Rule rules[] = {
     [TOKEN_ELSE]            = {NULL, NULL, P_NONE},
     [TOKEN_WHILE]           = {NULL, NULL, P_NONE},
     [TOKEN_RETURN]          = {NULL, NULL, P_NONE},
-    [TOKEN_IDENTIFIER]      = {NULL, NULL, P_NONE},
+    [TOKEN_IDENTIFIER]      = {(void *)parse_var_val, NULL, P_NONE},
     [TOKEN_SEMICOLON]       = {NULL, NULL, P_NONE},
     [TOKEN_COMMA]           = {NULL, NULL, P_NONE},
     [TOKEN_DOT]             = {NULL, NULL, P_NONE},

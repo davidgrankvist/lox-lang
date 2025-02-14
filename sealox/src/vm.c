@@ -29,11 +29,13 @@ void reset_stack() {
 void init_vm() {
     reset_stack();
     dict_init(&vm.strings);
+    dict_init(&vm.globals);
     vm.objects = NULL;
 }
 
 void free_vm() {
     dict_free(&vm.strings);
+    dict_free(&vm.globals);
     free_objects();
 }
 
@@ -135,8 +137,6 @@ static IntrResult run() {
                 push_val(MK_NIL_VAL);
                 break;
             case OP_RETURN: {
-                print_val(pop_val());
-                printf("\n");
                 keep_going = false;
                 break;
             }
@@ -178,6 +178,38 @@ static IntrResult run() {
             case OP_GREATER:
                 BINARY_OP(MK_BOOL_VAL, >);
                 break;
+            case OP_PRINT:
+                print_val(pop_val());
+                printf("\n");
+                break;
+            case OP_POP:
+                pop_val();
+                break;
+            case OP_DEFINE_GLOBAL: {
+                ObjStr* name = UNWRAP_STR(CONSUME_CONST());
+                dict_put(&vm.globals, name, pop_val());
+                break;
+            }
+            case OP_GET_GLOBAL: {
+                ObjStr* name = UNWRAP_STR(CONSUME_CONST());
+                Val val;
+                if (!dict_get(&vm.globals, name, &val)) {
+                    run_err("Unable to read undefined variable '%s'", name->chars);
+                    return INTR_RUN_ERR;
+                }
+                push_val(val);
+                break;
+            }
+            case OP_SET_GLOBAL: {
+                ObjStr* name = UNWRAP_STR(CONSUME_CONST());
+                if (!dict_has(&vm.globals, name)) {
+                    dict_del(&vm.globals, name);
+                    run_err("Unable to assign to undefined variable '%s'", name->chars);
+                    return INTR_RUN_ERR;
+                }
+                dict_put(&vm.globals, name, peek_val(0));
+                break;
+            }
             default:
                 keep_going = false;
                 break;

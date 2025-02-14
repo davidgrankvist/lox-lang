@@ -15,6 +15,7 @@ typedef struct {
     Val* top;
     Dict strings;
     Obj* objects;
+    Dict globals;
 } VmState;
 
 extern VmState vm;
