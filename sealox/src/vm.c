@@ -210,6 +210,16 @@ static IntrResult run() {
                 dict_put(&vm.globals, name, peek_val(0));
                 break;
             }
+            case OP_GET_LOCAL: {
+                uint8_t slot = CONSUME_OP();
+                push_val(vm.stack[slot]);
+                break;
+            }
+            case OP_SET_LOCAL: {
+                uint8_t slot = CONSUME_OP();
+                vm.stack[slot] = peek_val(0);
+                break;
+            }
             default:
                 keep_going = false;
                 break;

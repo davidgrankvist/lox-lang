@@ -116,6 +116,12 @@ int disas_op_at(Ops* ops, int pos) {
         case OP_SET_GLOBAL:
             next_pos = disas_simple("OP_SET_GLOBAL", pos);
             break;
+        case OP_GET_LOCAL:
+            next_pos = disas_simple("OP_GET_LOCAL", pos);
+            break;
+        case OP_SET_LOCAL:
+            next_pos = disas_simple("OP_SET_LOCAL", pos);
+            break;
         default:
             printf("Unknown op code %d\n", op);
             next_pos++;

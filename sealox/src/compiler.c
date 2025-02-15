@@ -10,6 +10,17 @@
 #endif
 
 typedef struct {
+    Token name;
+    int depth;    
+} Local;
+
+typedef struct {
+    Local locals[UINT8_COUNT]; 
+    int local_count;
+    int scope_depth;
+} Compiler;
+
+typedef struct {
     Token curr;
     Token prev;
     bool err;
@@ -18,6 +29,7 @@ typedef struct {
 
 Parser parser;
 Ops* ops_ptr;
+Compiler* comp = NULL;
 
 typedef enum {
     P_NONE,
@@ -46,6 +58,14 @@ static Rule* rule_of(TokenType type);
 static void parse_prec(Prec prec);
 static void parse_decl();
 static void parse_stmt();
+static bool id_equal(Token* first, Token* second);
+static void mark_initialized();
+
+void init_comp(Compiler* compiler) {
+    compiler->local_count = 0;
+    compiler->scope_depth = 0;
+    comp = compiler;
+}
 
 void err_at(Token* token, const char* msg) {
     if (parser.panic) {
@@ -299,9 +319,37 @@ void parse_print() {
     emit(OP_PRINT);
 }
 
+static void begin_scope() {
+    comp->scope_depth++;    
+}
+
+static void end_scope() {
+   comp->scope_depth--; 
+
+   // clear local variables from the ended scope
+   while (comp->local_count > 0 &&
+           comp->locals[comp->local_count - 1].depth >
+            comp->scope_depth) {
+        emit(OP_POP);
+        comp->local_count--;
+   }
+}
+
+static void parse_block() {
+    while(!check(TOKEN_CURLY_END) && !check(TOKEN_EOF)) {
+        parse_decl();
+    }
+
+    consume(TOKEN_CURLY_END, "Expected '}' at the end of block");
+}
+
 void parse_stmt() {
     if (match(TOKEN_PRINT)) {
         parse_print();
+    } else if (match(TOKEN_CURLY_START)) {
+        begin_scope();
+        parse_block();
+        end_scope();
     } else {
         parse_expr();
         consume(TOKEN_SEMICOLON, "Expected ';' at the end of statement");
@@ -310,6 +358,15 @@ void parse_stmt() {
 }
 
 void define_var(uint8_t i_val) {
+    /*
+     * No define is necessary for local variables,
+     * as they are stored directly on the VM stack.
+     */
+    if (comp->scope_depth > 0) {
+        mark_initialized();
+        return;
+    }
+
     emit2(OP_DEFINE_GLOBAL, i_val); 
 }
 
@@ -317,14 +374,38 @@ uint8_t identifier_constant(Token* token) {
     return mk_const(MK_OBJ_VAL((Obj*)cp_str(token->start, token->length)));
 }
 
+static int resolve_local(Compiler* compiler, Token* token) {
+    for (int i = compiler->local_count - 1; i >= 0; i--) {
+        Local* local = &compiler->locals[i];
+        if (id_equal(&local->name, token)) {
+            if (local->depth == -1) {
+                err("Can't read local variable in its own initializer");
+            }
+            return i;
+        }
+    }
+    return -1;
+}
+
 void parse_named_var(Token* token, bool can_assign) {
-    uint8_t i_val = identifier_constant(token);
+    uint8_t get_op;
+    uint8_t set_op;
+
+    int i_val = resolve_local(comp, token);
+    if (i_val != -1) {
+        get_op = OP_GET_LOCAL;
+        set_op = OP_SET_LOCAL;
+    } else {
+        i_val = identifier_constant(token);
+        get_op = OP_GET_GLOBAL;
+        set_op = OP_SET_GLOBAL;
+    }
 
     if (can_assign && match(TOKEN_EQUAL)) {
         parse_expr();
-        emit2(OP_SET_GLOBAL, i_val);
+        emit2(set_op, (uint8_t)i_val);
     } else {
-        emit2(OP_GET_GLOBAL, i_val);
+        emit2(get_op, (uint8_t)i_val);
     }
 }
 
@@ -332,8 +413,64 @@ void parse_var_val(bool can_assign) {
     parse_named_var(&parser.prev, can_assign);
 }
 
+static void mark_initialized() {
+    comp->locals[comp->local_count - 1].depth = comp->scope_depth;
+}
+
+static void add_local(Token token) {
+    if (comp->local_count == UINT8_COUNT) {
+        err("Too many local variables");
+        return;
+    }
+
+    Local* local = &comp->locals[comp->local_count++];
+    local->name = token;
+    /* Mark as declared, but not initialized.
+     * This is to avoid var a = a;
+     */
+    local->depth = -1;
+}
+
+static bool id_equal(Token* first, Token* second) {
+    return first->length == second->length &&
+        memcmp(first->start, second->start, first->length) == 0;
+}
+
+static void declare_var() {
+    // global variables are late bound
+    if (comp->scope_depth == 0) {
+        return;
+    }
+
+    Token* name = &parser.prev;
+
+    // look for conflicting variable names
+    for (int i = comp->local_count - 1; i >= 0; i--) {
+        Local* local = &comp->locals[i];
+        if (local->depth != -1 && local->depth < comp->scope_depth) {
+            break; 
+        }
+
+        if (id_equal(name, &local->name)) {
+            err("Variable already exists in this scope");
+        }
+    }
+
+    add_local(*name);
+}
+
 uint8_t parse_var(char* str) {
     consume(TOKEN_IDENTIFIER, "Expected variable identifier");
+
+    declare_var();
+    /*
+     * Local variables are not looked up by name at runtime,
+     * so we don't emit a named constant.
+     */
+    if (comp->scope_depth > 0) {
+        return 0;
+    }
+    
     return identifier_constant(&parser.prev);
 }
 
@@ -365,6 +502,9 @@ void parse_decl() {
 bool compile(const char* program, Ops* ops) {
     init_scanner(program); 
     ops_ptr = ops;
+
+    Compiler compiler;
+    init_comp(&compiler);
 
     parser.err = false;
     parser.panic = false;
