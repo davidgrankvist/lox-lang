@@ -8,6 +8,8 @@
 #include "memory.h"
 
 #define CONSUME_OP() (*vm.pc++)
+#define CONSUME_OP16() \
+    (vm.pc += 2, (uint16_t)((vm.pc[-2] << 8) | (vm.pc[-1])))
 #define CONSUME_CONST() (vm.ops->constants.vals[CONSUME_OP()])
 #define BINARY_OP(mk_val, o) \
     do { \
@@ -218,6 +220,23 @@ static IntrResult run() {
             case OP_SET_LOCAL: {
                 uint8_t slot = CONSUME_OP();
                 vm.stack[slot] = peek_val(0);
+                break;
+            }
+            case OP_JMP_IF_FALSE: {
+                uint16_t offset = CONSUME_OP16();
+                if (is_falsey(peek_val(0))) {
+                    vm.pc += offset;
+                }
+                break;
+            }
+            case OP_JMP: {
+                uint16_t offset = CONSUME_OP16();
+                vm.pc += offset;
+                break;
+            }
+            case OP_LOOP: {
+                uint16_t offset = CONSUME_OP16();
+                vm.pc -= offset;
                 break;
             }
             default:

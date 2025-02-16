@@ -54,6 +54,8 @@ typedef struct {
 } Rule;
 
 static void parse_expr();
+static void parse_expr_stmt();
+static void parse_var_decl();
 static Rule* rule_of(TokenType type);
 static void parse_prec(Prec prec);
 static void parse_decl();
@@ -343,17 +345,153 @@ static void parse_block() {
     consume(TOKEN_CURLY_END, "Expected '}' at the end of block");
 }
 
+/*
+ * Emit a preliminary instruction, since we need to parse the statement
+ * before we know where to jump.
+ */
+static int emit_jmp(uint8_t op) {
+    emit(op);
+    // placeholders
+    emit2(0xFF, 0xFF);
+    // index of first placeholder byte
+    return curr_ops()->count - 2;
+}
+
+static void patch_jmp(int i_jmp_val) {
+    /*
+     * Subtract i_jmp_val to get distance from the start of the jump value
+     * to the end of block. Subtract another 2 to only get the block length.
+     */
+    int jmp_dist = curr_ops()->count - i_jmp_val - 2; 
+
+    if (jmp_dist > UINT16_MAX) {
+        err("Uh oh, you can't jump that far in a condition. 16-bit numbers are used for the jump destination. Sorry.");
+    }
+
+    // the upper 8 bits are emitted first
+    curr_ops()->ops[i_jmp_val] = (jmp_dist >> 8) & 0xFF;
+    curr_ops()->ops[i_jmp_val + 1] = jmp_dist & 0xFF;
+}
+
+static void parse_if() {
+    consume(TOKEN_PAREN_START, "Expected '(' before if condition");
+    parse_expr();
+    consume(TOKEN_PAREN_END, "Expected ')' after if condition");
+
+    int if_jmp = emit_jmp(OP_JMP_IF_FALSE);
+    emit(OP_POP); // pop condition at beginning of if
+    parse_stmt();
+
+    // add a jump at the end of the if block to skip the else block
+    int else_jmp = emit_jmp(OP_JMP);
+
+    patch_jmp(if_jmp);
+    emit(OP_POP); // pop condition at beginning of else, since we jumped past the other pop
+
+    if (match(TOKEN_ELSE)) {
+        parse_stmt();
+    }
+    patch_jmp(else_jmp);
+}
+
+static void emit_loop(int loop_start) {
+      emit(OP_LOOP);
+
+      int offset = curr_ops()->count - loop_start + 2;
+      if (offset > UINT16_MAX) {
+        err("Uh oh, you can't have such a large while loop body. 16-bit numbers are used for the jump destination. Sorry.");
+      }
+
+      emit2((offset >> 8) & 0xFF, offset & 0xFF);
+}
+
+static void parse_while() {
+    int loop_start = curr_ops()->count;
+    consume(TOKEN_PAREN_START, "Expected '(' before while condition"); 
+    parse_expr();
+    consume(TOKEN_PAREN_END, "Expected ')' after while condition"); 
+
+    int exit_jmp = emit_jmp(OP_JMP_IF_FALSE);
+    emit(OP_POP);
+    parse_stmt();
+    emit_loop(loop_start);
+    patch_jmp(exit_jmp);
+    emit(OP_POP);
+}
+
+static void parse_for() {
+    // make sure initializer variable is in a dedicated scope
+    begin_scope();
+    consume(TOKEN_PAREN_START, "Expected '(' before for constructs");
+
+    // optional initializer
+    if (match(TOKEN_SEMICOLON)) {
+        // no initializer
+    } else if (match(TOKEN_VAR)) {
+       parse_var_decl(); 
+    } else {
+       parse_expr_stmt(); 
+    }
+
+    int loop_start = curr_ops()->count;
+    // optional loop condition
+    int exit_jmp = -1;
+    if (!match(TOKEN_SEMICOLON)) {
+        parse_expr(); 
+        consume(TOKEN_SEMICOLON, "Expected ';' after for condition");
+        exit_jmp = emit_jmp(OP_JMP_IF_FALSE);
+        emit(OP_POP); // pop condition before entering for block
+    }
+
+    // optional increment
+    if (!match(TOKEN_PAREN_END)) {
+        /*
+         * Use jumps in order to execute the increment
+         * after the for loop body.
+         */
+        int body_jmp = emit_jmp(OP_JMP); // jump to skip increment
+        int inc_start = curr_ops()->count;
+        // Consume increment. No semicolon, but otherwise like an expression statement
+        parse_expr();
+        emit(OP_POP);
+        consume(TOKEN_PAREN_END, "Expected ')' after for constructs");
+
+        emit_loop(loop_start); // jump back to the condition
+        loop_start = inc_start; // after loop body, jump to increment
+        patch_jmp(body_jmp);
+    }
+
+    parse_stmt();
+    emit_loop(loop_start); 
+    // check for optional condition exit
+    if (exit_jmp != -1) {
+        patch_jmp(exit_jmp);
+        emit(OP_POP); // pop condition when leaving for block
+    }
+    end_scope();
+}
+
+static void parse_expr_stmt() {
+    parse_expr();
+    consume(TOKEN_SEMICOLON, "Expected ';' at the end of statement");
+    emit(OP_POP);
+}
+
 void parse_stmt() {
     if (match(TOKEN_PRINT)) {
         parse_print();
+    } else if(match(TOKEN_IF)) {
+        parse_if();
+    } else if(match(TOKEN_WHILE)) {
+        parse_while();
+    } else if(match(TOKEN_FOR)) {
+        parse_for();
     } else if (match(TOKEN_CURLY_START)) {
         begin_scope();
         parse_block();
         end_scope();
     } else {
-        parse_expr();
-        consume(TOKEN_SEMICOLON, "Expected ';' at the end of statement");
-        emit(OP_POP);
+        parse_expr_stmt();
     }
 }
 
@@ -474,7 +612,7 @@ uint8_t parse_var(char* str) {
     return identifier_constant(&parser.prev);
 }
 
-void parse_var_decl() {
+static void parse_var_decl() {
     uint8_t global = parse_var("Expected a variable name");
 
     if (match(TOKEN_EQUAL)) {
@@ -497,6 +635,35 @@ void parse_decl() {
     if (parser.panic) {
         synch();
     }
+}
+
+static void parse_and() {
+    // skip right operand if left operand is false
+    int jmp = emit_jmp(OP_JMP_IF_FALSE); 
+    emit(OP_POP);
+    parse_prec(P_AND);
+    patch_jmp(jmp);
+}
+
+static void parse_or() {
+    /*
+     * Skip right operand if left operand is true.
+     *
+     * Instead of having a dedicated JMP_IF_TRUE, two jumps are combined to get that behavior.
+     */
+    int false_jmp = emit_jmp(OP_JMP_IF_FALSE);
+    int true_jmp = emit_jmp(OP_JMP);
+
+    patch_jmp(false_jmp);
+    /*
+     * If the left operand was false, then we pop it and let the
+     * whole expression evaluate to the right operand.
+     */
+    emit(OP_POP);
+    
+    parse_prec(P_OR);
+
+    patch_jmp(true_jmp);
 }
 
 bool compile(const char* program, Ops* ops) {
@@ -542,8 +709,8 @@ Rule rules[] = {
     [TOKEN_PAREN_END]       = {NULL, NULL, P_NONE},
     [TOKEN_CURLY_START]     = {NULL, NULL, P_NONE},
     [TOKEN_CURLY_END]       = {NULL, NULL, P_NONE},
-    [TOKEN_AND]             = {NULL, NULL, P_NONE},
-    [TOKEN_OR]              = {NULL, NULL, P_NONE},
+    [TOKEN_AND]             = {NULL, parse_and, P_AND},
+    [TOKEN_OR]              = {NULL, parse_or, P_OR},
     [TOKEN_NIL]             = {parse_nil, NULL, P_NONE},
     [TOKEN_VAR]             = {NULL, NULL, P_NONE},
     [TOKEN_FUN]             = {NULL, NULL, P_NONE},

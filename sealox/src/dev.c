@@ -122,6 +122,14 @@ int disas_op_at(Ops* ops, int pos) {
         case OP_SET_LOCAL:
             next_pos = disas_simple("OP_SET_LOCAL", pos);
             break;
+        case OP_JMP_IF_FALSE:
+            next_pos = disas_simple("OP_JMP_IF_FALSE", pos);
+            break;
+        case OP_JMP:
+            next_pos = disas_simple("OP_JMP", pos);
+        case OP_LOOP:
+            next_pos = disas_simple("OP_LOOP", pos);
+            break;
         default:
             printf("Unknown op code %d\n", op);
             next_pos++;
