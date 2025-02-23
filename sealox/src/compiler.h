@@ -3,6 +3,6 @@
 
 #include "ops.h"
 
-bool compile(const char* program, Ops* ops);
+ObjFunc* compile(const char* program);
 
 #endif

@@ -31,6 +31,15 @@ void print_obj(Val val) {
             printf("%s", chars); 
             break;
         }
+        case OBJ_FUNC: {
+            ObjFunc* fn = UNWRAP_FUNC(val);
+            if (fn->name == NULL) {
+                printf("<script>");
+            } else {
+                printf("<fn %s>", fn->name->chars);
+            }
+            break;
+        }
         default:
             printf("<unknown obj>"); 
             break;

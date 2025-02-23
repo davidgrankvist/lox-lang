@@ -14,10 +14,17 @@ typedef struct {
     int depth;    
 } Local;
 
+typedef enum {
+    FN_FUNC,
+    FN_SCRIPT,
+} FuncType;
+
 typedef struct {
     Local locals[UINT8_COUNT]; 
     int local_count;
     int scope_depth;
+    ObjFunc* fn;
+    FuncType fn_type;
 } Compiler;
 
 typedef struct {
@@ -28,7 +35,6 @@ typedef struct {
 } Parser;
 
 Parser parser;
-Ops* ops_ptr;
 Compiler* comp = NULL;
 
 typedef enum {
@@ -63,10 +69,18 @@ static void parse_stmt();
 static bool id_equal(Token* first, Token* second);
 static void mark_initialized();
 
-void init_comp(Compiler* compiler) {
+void init_comp(Compiler* compiler, FuncType fn_type) {
     compiler->local_count = 0;
     compiler->scope_depth = 0;
+    compiler->fn = NULL;
+    compiler->fn = create_func();
+    compiler->fn_type = fn_type;
     comp = compiler;
+
+    Local* local = &comp->locals[comp->local_count++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.length = 0;
 }
 
 void err_at(Token* token, const char* msg) {
@@ -133,7 +147,7 @@ static bool check(TokenType type) {
 }
 
 Ops* curr_ops() {
-    return ops_ptr;
+    return &comp->fn->ops; 
 }
 
 /*
@@ -179,13 +193,16 @@ void emit_ret() {
     emit(OP_RETURN);
 }
 
-void end_comp() {
+ObjFunc* end_comp() {
     emit_ret();
+    ObjFunc* fn = comp->fn;
 #ifdef DEBUG_COMP
     if (parser.err) {
-        disas_ops(curr_ops(), "code");
+        disas_ops(curr_ops(), fn->name != NULL ? fn->name->chars : "<script>");
     }
 #endif
+
+    return fn;
 }
 
 uint8_t mk_const(Val val) {
@@ -666,12 +683,11 @@ static void parse_or() {
     patch_jmp(true_jmp);
 }
 
-bool compile(const char* program, Ops* ops) {
+ObjFunc* compile(const char* program) {
     init_scanner(program); 
-    ops_ptr = ops;
 
     Compiler compiler;
-    init_comp(&compiler);
+    init_comp(&compiler, FN_SCRIPT);
 
     parser.err = false;
     parser.panic = false;
@@ -683,8 +699,8 @@ bool compile(const char* program, Ops* ops) {
     }
 
     consume(TOKEN_EOF, "Expected EOF");
-    end_comp();
-    return !parser.err;
+    ObjFunc* fn = end_comp();
+    return parser.err ? NULL : fn;
 }
 
 // mapping from tokens to rules

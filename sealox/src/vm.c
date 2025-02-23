@@ -7,10 +7,10 @@
 #include "ops.h"
 #include "memory.h"
 
-#define CONSUME_OP() (*vm.pc++)
+#define CONSUME_OP() (*frame->pc++)
 #define CONSUME_OP16() \
-    (vm.pc += 2, (uint16_t)((vm.pc[-2] << 8) | (vm.pc[-1])))
-#define CONSUME_CONST() (vm.ops->constants.vals[CONSUME_OP()])
+    (vm.pc += 2, (uint16_t)((frame->pc[-2] << 8) | (frame->pc[-1])))
+#define CONSUME_CONST() (frame->fn->ops.constants.vals[CONSUME_OP()])
 #define BINARY_OP(mk_val, o) \
     do { \
         if (!IS_NUM(peek_val(0)) || !IS_NUM(peek_val(1))) { \
@@ -26,6 +26,7 @@ VmState vm;
 
 void reset_stack() {
     vm.top = vm.stack; 
+    vm.frame_count = 0;
 }
 
 void init_vm() {
@@ -62,8 +63,9 @@ void run_err(const char* format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    size_t op = vm.pc - vm.ops->ops - 1;
-    int line = vm.ops->lines[op];
+    CallFrame* frame = &vm.frames[vm.frame_count - 1];
+    size_t op = frame->pc - frame->fn->ops.ops - 1;
+    int line = frame->fn->ops.lines[op];
     fprintf(stderr, "[line %d] in script \n", line);
     reset_stack();
 }
@@ -112,6 +114,7 @@ void concat() {
 }
 
 static IntrResult run() {
+    CallFrame* frame = &vm.frames[vm.frame_count - 1];
     bool keep_going = true;
     while(keep_going) {
         uint8_t op;
@@ -123,7 +126,7 @@ static IntrResult run() {
         printf("]");
     }
     printf("\n");
-    disas_op_at(vm.ops, (int)(vm.pc - vm.ops->ops));
+    disas_op_at(&frame->fn->ops, (int)(frame->pc - frame->fn->ops.ops));
 #endif
         switch(op = CONSUME_OP()) {
             case OP_CONST:
@@ -214,29 +217,29 @@ static IntrResult run() {
             }
             case OP_GET_LOCAL: {
                 uint8_t slot = CONSUME_OP();
-                push_val(vm.stack[slot]);
+                push_val(frame->slots[slot]);
                 break;
             }
             case OP_SET_LOCAL: {
                 uint8_t slot = CONSUME_OP();
-                vm.stack[slot] = peek_val(0);
+                frame->slots[slot] = peek_val(0);
                 break;
             }
             case OP_JMP_IF_FALSE: {
                 uint16_t offset = CONSUME_OP16();
                 if (is_falsey(peek_val(0))) {
-                    vm.pc += offset;
+                    frame->pc += offset;
                 }
                 break;
             }
             case OP_JMP: {
                 uint16_t offset = CONSUME_OP16();
-                vm.pc += offset;
+                frame->pc += offset;
                 break;
             }
             case OP_LOOP: {
                 uint16_t offset = CONSUME_OP16();
-                vm.pc -= offset;
+                frame->pc -= offset;
                 break;
             }
             default:
@@ -247,26 +250,17 @@ static IntrResult run() {
     return INTR_OK;
 }
 
-IntrResult run_ops(Ops* ops) {
-    vm.ops = ops;
-    vm.pc = vm.ops->ops; 
-    return run();
-}
-
 IntrResult interpret(char* program) {
-    Ops ops;
-    init_ops(&ops);
-
-    if (!compile(program, &ops)) {
-        free_ops(&ops);
+    ObjFunc* fn = compile(program);
+    if (fn == NULL) {
         return INTR_COMP_ERR;
     }
 
-    vm.ops = &ops;
-    vm.pc = vm.ops->ops;
+    push_val(MK_OBJ_VAL((Obj*)fn));
+    CallFrame* frame = &vm.frames[vm.frame_count++];
+    frame->fn = fn;
+    frame->pc = fn->ops.ops;
+    frame->slots = vm.stack;
 
-    IntrResult result = run();
-
-    free_ops(&ops);
-    return result;
+    return run();
 }

@@ -6,16 +6,28 @@
 #include "dev.h"
 #include "dict.h"
 
-#define STACK_SIZE 256
+#define MAX_FRAMES 64
+#define STACK_SIZE (MAX_FRAMES * UINT8_COUNT)
+
+typedef struct {
+    ObjFunc* fn;
+    uint8_t* pc;
+    Val* slots;
+} CallFrame;
 
 typedef struct {
     Ops* ops;
     uint8_t* pc;
+
     Val stack[STACK_SIZE];
     Val* top;
+
     Dict strings;
     Obj* objects;
     Dict globals;
+
+    CallFrame frames[MAX_FRAMES];
+    int frame_count;
 } VmState;
 
 extern VmState vm;

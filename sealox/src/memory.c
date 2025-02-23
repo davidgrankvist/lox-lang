@@ -90,6 +90,13 @@ void free_object(Obj* obj) {
             free(str);
             break;                        
         }
+        case OBJ_FUNC: {
+            ObjFunc* fn = (ObjFunc*)obj;
+            free(fn->name);
+            free_ops(&fn->ops);
+            free(fn);
+            break;
+        }
     }
 }
 
@@ -110,3 +117,12 @@ ObjStr* alloc_str_no_gc(char* start, int length) {
 
     return str;
 }
+
+ObjFunc* create_func() {
+    ObjFunc* fn = (ObjFunc*)ALLOCATE_OBJ(ObjFunc, OBJ_FUNC);
+    fn->arity = 0;
+    fn->name = NULL;
+    init_ops(&fn->ops);
+    return fn;
+}
+

@@ -31,7 +31,8 @@ typedef enum {
 } OpCode;
 
 typedef enum {
-    OBJ_STR 
+    OBJ_STR,
+    OBJ_FUNC,
 } ObjType;
 
 typedef struct Obj {
@@ -85,6 +86,9 @@ static inline bool is_obj_type(Val v, ObjType t) {
 #define UNWRAP_STR(v) ((ObjStr*)(UNWRAP_OBJ(v)))
 #define UNWRAP_STR_CHARS(v) (UNWRAP_STR(v)->chars)
 
+#define IS_FUNC(v) is_obj_type(v, OBJ_FUNC)
+#define UNWRAP_FUNC(v) ((ObjFunc*)(UNWRAP_OBJ(v)))
+
 typedef struct {
     int count;
     int capacity;
@@ -98,6 +102,13 @@ typedef struct {
     Vals constants;
     int* lines;
 } Ops;
+
+typedef struct {
+    Obj obj;
+    int arity;
+    Ops ops;
+    ObjStr* name;
+} ObjFunc;
 
 void init_ops(Ops* ops);
 void free_ops(Ops* ops);
