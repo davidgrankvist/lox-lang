@@ -4,7 +4,7 @@ SRC = $(wildcard src/*.c)
 BIN_DIR = bin
 TARGET = $(BIN_DIR)/sealox
 CC = gcc
-CFLAGS = -g
+CFLAGS = -g -Wall
 
 TEST_SRC = $(wildcard test/*.c)
 TEST_TARGET = $(BIN_DIR)/test_runner

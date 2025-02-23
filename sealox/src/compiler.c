@@ -173,6 +173,8 @@ static void synch() {
             case TOKEN_PRINT:
             case TOKEN_RETURN:
                 return;
+            default:
+                break;
         }
 
         advance();
@@ -232,6 +234,8 @@ void parse_bool() {
         case TOKEN_FALSE:
             emit(OP_FALSE);
             break;
+        default:
+            break;
     }
 }
 
@@ -283,6 +287,8 @@ void parse_unary() {
         case TOKEN_BANG:
             emit(OP_NOT);
             break;
+        default:
+            break;
     }
 }
 
@@ -324,6 +330,8 @@ void parse_binary() {
         case TOKEN_GREATER_EQUAL:
             // a >= b -> !(a < b)
             emit2(OP_LESS, OP_NOT);
+            break;
+        default:
             break;
     }
 }
