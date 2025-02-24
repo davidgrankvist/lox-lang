@@ -25,6 +25,6 @@ ObjStr* alloc_str_no_gc(char* start, int length);
 void free_objects();
 
 ObjFunc* create_func();
-
+ObjNative* create_native_func(NativeFn fn);
 
 #endif

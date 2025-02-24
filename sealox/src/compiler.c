@@ -19,12 +19,13 @@ typedef enum {
     FN_SCRIPT,
 } FuncType;
 
-typedef struct {
+typedef struct Compiler {
     Local locals[UINT8_COUNT]; 
     int local_count;
     int scope_depth;
     ObjFunc* fn;
     FuncType fn_type;
+    struct Compiler* enclosing;
 } Compiler;
 
 typedef struct {
@@ -75,7 +76,11 @@ void init_comp(Compiler* compiler, FuncType fn_type) {
     compiler->fn = NULL;
     compiler->fn = create_func();
     compiler->fn_type = fn_type;
+    compiler->enclosing = comp;
     comp = compiler;
+    if (fn_type != FN_SCRIPT) {
+        comp->fn->name = cp_str(parser.prev.start,  parser.prev.length);
+    }
 
     Local* local = &comp->locals[comp->local_count++];
     local->depth = 0;
@@ -192,7 +197,7 @@ void emit2(uint8_t b1, uint8_t b2) {
 }
 
 void emit_ret() {
-    emit(OP_RETURN);
+    emit2(OP_NIL, OP_RETURN);
 }
 
 ObjFunc* end_comp() {
@@ -204,6 +209,7 @@ ObjFunc* end_comp() {
     }
 #endif
 
+    comp = comp->enclosing;
     return fn;
 }
 
@@ -502,11 +508,27 @@ static void parse_expr_stmt() {
     emit(OP_POP);
 }
 
+static void parse_ret() {
+    if (comp->fn_type == FN_SCRIPT) {
+        err("Can't return from top level code. Lol");
+    }
+
+    if (match(TOKEN_SEMICOLON)) {
+        emit_ret();
+    } else {
+        parse_expr();
+        consume(TOKEN_SEMICOLON, "Expected ';' after return");
+        emit(OP_RETURN);
+    }
+}
+
 void parse_stmt() {
     if (match(TOKEN_PRINT)) {
         parse_print();
     } else if(match(TOKEN_IF)) {
         parse_if();
+    } else if(match(TOKEN_RETURN)) {
+        parse_ret();
     } else if(match(TOKEN_WHILE)) {
         parse_while();
     } else if(match(TOKEN_FOR)) {
@@ -577,6 +599,9 @@ void parse_var_val(bool can_assign) {
 }
 
 static void mark_initialized() {
+    if (comp->scope_depth == 0) {
+        return;
+    }
     comp->locals[comp->local_count - 1].depth = comp->scope_depth;
 }
 
@@ -623,7 +648,7 @@ static void declare_var() {
 }
 
 uint8_t parse_var(char* str) {
-    consume(TOKEN_IDENTIFIER, "Expected variable identifier");
+    consume(TOKEN_IDENTIFIER, str);
 
     declare_var();
     /*
@@ -650,9 +675,42 @@ static void parse_var_decl() {
     define_var(global);
 }
 
+static void parse_fun(FuncType fn_type) {
+    Compiler compiler;
+    init_comp(&compiler, fn_type);
+    begin_scope();
+
+    consume(TOKEN_PAREN_START, "Expected '(' after function name");
+    if (!check(TOKEN_PAREN_END)) {
+        do {
+            comp->fn->arity++;
+            if (comp->fn->arity > 255) {
+                err("Too many function arguments. Max 255 are supported. Sorry..");
+            }
+            uint8_t c = parse_var("Expected a parameter name");
+            define_var(c);
+        } while(match(TOKEN_COMMA));
+    }
+    consume(TOKEN_PAREN_END, "Expected ')' after function parameters");
+    consume(TOKEN_CURLY_START, "Expected '{' before function body");
+    parse_block();
+
+    ObjFunc* fn = end_comp();
+    emit_const(MK_OBJ_VAL((Obj*)fn));
+}
+
+static void parse_fun_decl() {
+    uint8_t global = parse_var("Expected function name");
+    mark_initialized();
+    parse_fun(FN_FUNC);
+    define_var(global);
+}
+
 void parse_decl() {
     if (match(TOKEN_VAR)) {
         parse_var_decl();
+    } else if(match(TOKEN_FUN)) {
+        parse_fun_decl();
     } else {
         parse_stmt();
     }
@@ -689,6 +747,26 @@ static void parse_or() {
     parse_prec(P_OR);
 
     patch_jmp(true_jmp);
+}
+
+static uint8_t parse_arglist() {
+    uint8_t argc;
+    if (!check(TOKEN_PAREN_END)) {
+        do {
+            parse_expr();
+            argc++;
+            if (argc > 255) {
+                err("Too many function arguments. Max 255 are supported. Sorry..");
+            }
+        } while(match(TOKEN_COMMA));
+    }
+    consume(TOKEN_PAREN_END, "Expected ')' after function call arguments");
+    return argc;
+}
+
+static void parse_call() {
+    uint8_t argc = parse_arglist();
+    emit2(OP_CALL, argc);
 }
 
 ObjFunc* compile(const char* program) {
@@ -729,7 +807,7 @@ Rule rules[] = {
     [TOKEN_LESS_EQUAL]      = {NULL, parse_binary, P_COMP},
     [TOKEN_GREATER]         = {NULL, parse_binary, P_COMP},
     [TOKEN_GREATER_EQUAL]   = {NULL, parse_binary, P_COMP},
-    [TOKEN_PAREN_START]     = {parse_group, NULL, P_NONE},
+    [TOKEN_PAREN_START]     = {parse_group, parse_call, P_CALL},
     [TOKEN_PAREN_END]       = {NULL, NULL, P_NONE},
     [TOKEN_CURLY_START]     = {NULL, NULL, P_NONE},
     [TOKEN_CURLY_END]       = {NULL, NULL, P_NONE},

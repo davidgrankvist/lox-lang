@@ -40,6 +40,10 @@ void print_obj(Val val) {
             }
             break;
         }
+        case OBJ_NATIVE: {
+            printf("<native fn>");
+            break;
+        }
         default:
             printf("<unknown obj>"); 
             break;
@@ -138,6 +142,9 @@ int disas_op_at(Ops* ops, int pos) {
             next_pos = disas_simple("OP_JMP", pos);
         case OP_LOOP:
             next_pos = disas_simple("OP_LOOP", pos);
+            break;
+        case OP_CALL:
+            next_pos = disas_simple("OP_CALL", pos);
             break;
         default:
             printf("Unknown op code %d\n", op);

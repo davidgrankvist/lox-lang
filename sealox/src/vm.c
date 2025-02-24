@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include "vm.h"
 #include "dev.h"
 #include "compiler.h"
@@ -22,6 +23,9 @@
         push_val(mk_val(a o b)); \
     } while(false)
 
+static void define_native(const char* name, NativeFn fn);
+static Val clock_native(int argc, Val* args);
+
 VmState vm;
 
 void reset_stack() {
@@ -34,6 +38,8 @@ void init_vm() {
     dict_init(&vm.strings);
     dict_init(&vm.globals);
     vm.objects = NULL;
+
+    define_native("clock", clock_native);
 }
 
 void free_vm() {
@@ -63,10 +69,19 @@ void run_err(const char* format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    CallFrame* frame = &vm.frames[vm.frame_count - 1];
-    size_t op = frame->pc - frame->fn->ops.ops - 1;
-    int line = frame->fn->ops.lines[op];
-    fprintf(stderr, "[line %d] in script \n", line);
+    // stack trace
+    for (int i = vm.frame_count - 1; i >= 0; i--) {
+        CallFrame* frame = &vm.frames[i];
+        ObjFunc* fn = frame->fn;
+        size_t instruction = frame->pc - fn->ops.ops - 1; // -1 because pc is already at the next one
+        fprintf(stderr, "[line %d] in ", fn->ops.lines[instruction]);
+        if (fn->name == NULL) {
+            fprintf(stderr, "script\n");
+        } else {
+            fprintf(stderr, "%s()\n", fn->name->chars);
+        }
+    }
+
     reset_stack();
 }
 
@@ -113,6 +128,57 @@ void concat() {
     push_val(MK_OBJ_VAL((Obj*)result));
 }
 
+static bool call(ObjFunc* fn, int argc) {
+    if (argc != fn->arity) {
+        run_err("Unexpected number of function call arguments. Expected %d, but received %d", fn->arity, argc);
+        return false;
+    }
+    if (vm.frame_count == MAX_FRAMES) {
+        run_err("Stack overflow. At most %d call frames are allowed. Sorry.", MAX_FRAMES);
+        return false;
+    }
+    CallFrame* frame = &vm.frames[vm.frame_count++];
+    frame->fn = fn;
+    frame->pc = fn->ops.ops;
+    frame->slots = vm.top - argc - 1;
+    return true;
+}
+
+static Val clock_native(int argc, Val* args) {
+    return MK_NUM_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+static void define_native(const char* name, NativeFn fn) {
+    // push / pop to make sure GC picks up the allocated string / function
+    push_val(MK_OBJ_VAL((Obj*)cp_str(name, (int)strlen(name))));
+    push_val(MK_OBJ_VAL((Obj*)create_native_func(fn)));
+
+    // declare the native function as a global
+    dict_put(&vm.globals, UNWRAP_STR(vm.stack[0]), vm.stack[1]);
+
+    pop_val();
+    pop_val();
+}
+
+static bool call_val(Val callee, int argc) {
+    if (IS_OBJ(callee)) {
+        switch(OBJ_TYPE(callee)) {
+            case OBJ_FUNC:
+                return call(UNWRAP_FUNC(callee), argc);
+            case OBJ_NATIVE: {
+                NativeFn fn = UNWRAP_NATIVE_FN(callee)->fn;
+                Val result = fn(argc, vm.top - argc);
+                push_val(result);
+                return true;
+            }
+            default:
+                break;
+        }
+    }
+    run_err("Can only call functions and classes");
+    return false;
+}
+
 static IntrResult run() {
     CallFrame* frame = &vm.frames[vm.frame_count - 1];
     bool keep_going = true;
@@ -142,7 +208,16 @@ static IntrResult run() {
                 push_val(MK_NIL_VAL);
                 break;
             case OP_RETURN: {
-                keep_going = false;
+                Val result = pop_val(); 
+                vm.frame_count--;
+                if (vm.frame_count == 0) {
+                    pop_val(); // pop main function
+                    return INTR_OK;
+                }
+
+                vm.top = frame->slots;
+                push_val(result);
+                frame = &vm.frames[vm.frame_count - 1];
                 break;
             }
             case OP_NEGATE:
@@ -242,6 +317,14 @@ static IntrResult run() {
                 frame->pc -= offset;
                 break;
             }
+            case OP_CALL: {
+                int argc = CONSUME_OP();
+                if (!call_val(peek_val(argc), argc)) {
+                    return INTR_RUN_ERR;
+                }
+                frame = &vm.frames[vm.frame_count - 1];
+                break;
+            }
             default:
                 keep_going = false;
                 break;
@@ -257,10 +340,7 @@ IntrResult interpret(char* program) {
     }
 
     push_val(MK_OBJ_VAL((Obj*)fn));
-    CallFrame* frame = &vm.frames[vm.frame_count++];
-    frame->fn = fn;
-    frame->pc = fn->ops.ops;
-    frame->slots = vm.stack;
+    call(fn, 0); // call implicit "main"
 
     return run();
 }

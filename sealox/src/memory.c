@@ -97,6 +97,10 @@ void free_object(Obj* obj) {
             free(fn);
             break;
         }
+        case OBJ_NATIVE: {
+            ObjNative* nat = (ObjNative*)obj;
+            free(nat);
+        }
     }
 }
 
@@ -124,5 +128,11 @@ ObjFunc* create_func() {
     fn->name = NULL;
     init_ops(&fn->ops);
     return fn;
+}
+
+ObjNative* create_native_func(NativeFn fn) {
+    ObjNative* nat = (ObjNative*)ALLOCATE_OBJ(ObjNative, OBJ_NATIVE); 
+    nat->fn = fn;
+    return nat;
 }
 
