@@ -10,7 +10,7 @@
 
 #define CONSUME_OP() (*frame->pc++)
 #define CONSUME_OP16() \
-    (vm.pc += 2, (uint16_t)((frame->pc[-2] << 8) | (frame->pc[-1])))
+    (frame->pc += 2, (uint16_t)((frame->pc[-2] << 8) | (frame->pc[-1])))
 #define CONSUME_CONST() (frame->fn->ops.constants.vals[CONSUME_OP()])
 #define BINARY_OP(mk_val, o) \
     do { \

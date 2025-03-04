@@ -2,6 +2,9 @@
 #include "dev.h"
 #include "ops.h"
 
+#define PRINT_LINE_INFO(p) \
+    printf("%04d %4d ", p, ops->lines[p])
+
 void disas_ops(Ops* ops, const char* name) {
    printf("-- %s --\n", name); 
 
@@ -22,6 +25,22 @@ int disas_const(const char* name, int pos, Ops* ops) {
     print_val(val);
     printf("\n");
     return pos + 2;
+}
+
+static int disas_jmp(const char* name, int pos, Ops* ops) {
+    uint8_t offset_upper = ops->ops[pos + 1];
+    uint8_t offset_lower = ops->ops[pos + 2];
+    uint16_t offset = (uint16_t)((offset_upper << 8) | offset_lower);
+
+    printf("%s (offset %d)\n", name, offset);
+
+    PRINT_LINE_INFO(pos + 1);
+    printf("OFFSET_UPPER %d\n", offset_upper);
+
+    PRINT_LINE_INFO(pos + 2);
+    printf("OFFSET_LOWER %d\n", offset_lower);
+
+    return pos + 3;
 }
 
 void print_obj(Val val) {
@@ -65,8 +84,7 @@ void print_val(Val val) {
 }
 
 int disas_op_at(Ops* ops, int pos) {
-    int line = ops->lines[pos];
-    printf("%04d %4d ", pos, line);
+    PRINT_LINE_INFO(pos);
 
     uint8_t op = ops->ops[pos];
     int next_pos = pos;
@@ -136,10 +154,11 @@ int disas_op_at(Ops* ops, int pos) {
             next_pos = disas_simple("OP_SET_LOCAL", pos);
             break;
         case OP_JMP_IF_FALSE:
-            next_pos = disas_simple("OP_JMP_IF_FALSE", pos);
+            next_pos = disas_jmp("OP_JMP_IF_FALSE", pos, ops);
             break;
         case OP_JMP:
-            next_pos = disas_simple("OP_JMP", pos);
+            next_pos = disas_jmp("OP_JMP", pos, ops);
+            break;
         case OP_LOOP:
             next_pos = disas_simple("OP_LOOP", pos);
             break;
