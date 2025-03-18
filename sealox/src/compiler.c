@@ -19,12 +19,18 @@ typedef enum {
     FN_SCRIPT,
 } FuncType;
 
+typedef struct {
+    bool is_local;
+    uint8_t index; 
+} Upvalue;
+
 typedef struct Compiler {
     Local locals[UINT8_COUNT]; 
     int local_count;
     int scope_depth;
     ObjFunc* fn;
     FuncType fn_type;
+    Upvalue upvalues[UINT8_COUNT];
     struct Compiler* enclosing;
 } Compiler;
 
@@ -572,6 +578,46 @@ static int resolve_local(Compiler* compiler, Token* token) {
     return -1;
 }
 
+static int add_upvalue(Compiler* compiler, uint8_t local_index, bool is_local) {
+    int upvalue_count = compiler->fn->upvalue_count;
+
+    // prevent creating multiple upvalues for the same variable
+    for (int i = 0; i < upvalue_count; i++) {
+        Upvalue* upvalue = &compiler->upvalues[i]; 
+        if (upvalue->index == local_index && upvalue->is_local == is_local) {
+            return i;
+        }
+    }
+
+    if (upvalue_count >= UINT8_COUNT) {
+        err("Too many variables were captured by closures. At most 255 upvalues are allowd.");
+        return 0;
+    }
+
+    compiler->upvalues[upvalue_count].is_local = is_local;
+    compiler->upvalues[upvalue_count].index = local_index;
+    return compiler->fn->upvalue_count++;
+}
+
+static int resolve_upvalue(Compiler* compiler, Token* token) {
+    if (compiler->enclosing == NULL) {
+        return -1;
+    }
+
+    int local = resolve_local(compiler, token);
+    if (local != -1) {
+        return add_upvalue(compiler, (uint8_t)local, true);
+    }
+
+    // resolve recursively
+    int upvalue = resolve_upvalue(compiler->enclosing, token);
+    if (upvalue != -1) {
+        return add_upvalue(compiler, (uint8_t)upvalue, false);
+    }
+
+    return -1;
+}
+
 void parse_named_var(Token* token, bool can_assign) {
     uint8_t get_op;
     uint8_t set_op;
@@ -580,6 +626,9 @@ void parse_named_var(Token* token, bool can_assign) {
     if (i_val != -1) {
         get_op = OP_GET_LOCAL;
         set_op = OP_SET_LOCAL;
+    } else if ((i_val = resolve_upvalue(comp, token)) != -1) {
+        get_op = OP_GET_UPVALUE;
+        set_op = OP_SET_UPVALUE;
     } else {
         i_val = identifier_constant(token);
         get_op = OP_GET_GLOBAL;
@@ -696,7 +745,13 @@ static void parse_fun(FuncType fn_type) {
     parse_block();
 
     ObjFunc* fn = end_comp();
-    emit_const(MK_OBJ_VAL((Obj*)fn));
+    emit2(OP_CLOSURE, mk_const(MK_OBJ_VAL((Obj*)fn)));
+
+    // variable sized encoding for all of the upvalues
+    for (int i = 0; i < fn->upvalue_count; i++) {
+        emit(comp->upvalues[i].is_local ? 1 : 0);
+        emit(comp->upvalues[i].index);
+    }
 }
 
 static void parse_fun_decl() {

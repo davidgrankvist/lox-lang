@@ -100,6 +100,18 @@ void free_object(Obj* obj) {
         case OBJ_NATIVE: {
             ObjNative* nat = (ObjNative*)obj;
             free(nat);
+            break;
+        }
+        case OBJ_CLOSURE: {
+            ObjClosure* closure = (ObjClosure*)obj;
+            free(closure->upvalues);
+            free(closure);
+            break;
+        }
+        case OBJ_UPVALUE: {
+            ObjUpvalue* upvalue = (ObjUpvalue*)obj;
+            free(upvalue);
+            break;
         }
     }
 }
@@ -126,6 +138,7 @@ ObjFunc* create_func() {
     ObjFunc* fn = (ObjFunc*)ALLOCATE_OBJ(ObjFunc, OBJ_FUNC);
     fn->arity = 0;
     fn->name = NULL;
+    fn->upvalue_count = 0;
     init_ops(&fn->ops);
     return fn;
 }
@@ -136,3 +149,22 @@ ObjNative* create_native_func(NativeFn fn) {
     return nat;
 }
 
+ObjClosure* create_closure(ObjFunc* fn) {
+    ObjClosure* closure = (ObjClosure*)ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE); 
+    closure->fn = fn;
+
+    ObjUpvalue** upvalues = REALLOC_ARR(ObjUpvalue*, NULL, fn->upvalue_count);
+    for (int i = 0; i < fn->upvalue_count; i++) {
+        upvalues[i] = NULL;
+    }
+    closure->upvalues = upvalues;
+    closure->upvalue_count = fn->upvalue_count;
+
+    return closure;
+}
+
+ObjUpvalue* create_upvalue(Val* slot) {
+    ObjUpvalue* upvalue = (ObjUpvalue*)ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE); 
+    upvalue->slot = slot;
+    return upvalue;
+}

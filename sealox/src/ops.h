@@ -29,12 +29,17 @@ typedef enum {
     OP_JMP,
     OP_LOOP,
     OP_CALL,
+    OP_CLOSURE,
+    OP_GET_UPVALUE,
+    OP_SET_UPVALUE,
 } OpCode;
 
 typedef enum {
     OBJ_STR,
     OBJ_FUNC,
     OBJ_NATIVE,
+    OBJ_CLOSURE,
+    OBJ_UPVALUE,
 } ObjType;
 
 typedef struct Obj {
@@ -94,6 +99,9 @@ static inline bool is_obj_type(Val v, ObjType t) {
 #define IS_NATIVE(v) is_obj_type(v, OBJ_NATIVE)
 #define UNWRAP_NATIVE_FN(v) ((ObjNative*)(UNWRAP_OBJ(v)))
 
+#define IS_CLOSURE(v) is_obj_type(v, OBJ_CLOSURE)
+#define UNWRAP_CLOSURE(v) ((ObjClosure*)(UNWRAP_OBJ(v)))
+
 typedef struct {
     int count;
     int capacity;
@@ -113,7 +121,20 @@ typedef struct {
     int arity;
     Ops ops;
     ObjStr* name;
+    int upvalue_count;
 } ObjFunc;
+
+typedef struct ObjUpvalue {
+    Obj obj;
+    Val* slot;
+} ObjUpvalue;
+
+typedef struct {
+    Obj obj;
+    ObjFunc* fn;
+    ObjUpvalue** upvalues;
+    int upvalue_count;
+} ObjClosure;
 
 typedef Val (*NativeFn)(int argc, Val* args);
 

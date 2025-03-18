@@ -11,7 +11,7 @@
 #define CONSUME_OP() (*frame->pc++)
 #define CONSUME_OP16() \
     (frame->pc += 2, (uint16_t)((frame->pc[-2] << 8) | (frame->pc[-1])))
-#define CONSUME_CONST() (frame->fn->ops.constants.vals[CONSUME_OP()])
+#define CONSUME_CONST() (frame->closure->fn->ops.constants.vals[CONSUME_OP()])
 #define BINARY_OP(mk_val, o) \
     do { \
         if (!IS_NUM(peek_val(0)) || !IS_NUM(peek_val(1))) { \
@@ -72,7 +72,7 @@ void run_err(const char* format, ...) {
     // stack trace
     for (int i = vm.frame_count - 1; i >= 0; i--) {
         CallFrame* frame = &vm.frames[i];
-        ObjFunc* fn = frame->fn;
+        ObjFunc* fn = frame->closure->fn;
         size_t instruction = frame->pc - fn->ops.ops - 1; // -1 because pc is already at the next one
         fprintf(stderr, "[line %d] in ", fn->ops.lines[instruction]);
         if (fn->name == NULL) {
@@ -128,7 +128,8 @@ void concat() {
     push_val(MK_OBJ_VAL((Obj*)result));
 }
 
-static bool call(ObjFunc* fn, int argc) {
+static bool call(ObjClosure* closure, int argc) {
+    ObjFunc* fn = closure->fn;
     if (argc != fn->arity) {
         run_err("Unexpected number of function call arguments. Expected %d, but received %d", fn->arity, argc);
         return false;
@@ -138,7 +139,7 @@ static bool call(ObjFunc* fn, int argc) {
         return false;
     }
     CallFrame* frame = &vm.frames[vm.frame_count++];
-    frame->fn = fn;
+    frame->closure = closure;
     frame->pc = fn->ops.ops;
     frame->slots = vm.top - argc - 1;
     return true;
@@ -163,8 +164,8 @@ static void define_native(const char* name, NativeFn fn) {
 static bool call_val(Val callee, int argc) {
     if (IS_OBJ(callee)) {
         switch(OBJ_TYPE(callee)) {
-            case OBJ_FUNC:
-                return call(UNWRAP_FUNC(callee), argc);
+            case OBJ_CLOSURE:
+                return call(UNWRAP_CLOSURE(callee), argc);
             case OBJ_NATIVE: {
                 NativeFn fn = UNWRAP_NATIVE_FN(callee)->fn;
                 Val result = fn(argc, vm.top - argc);
@@ -177,6 +178,11 @@ static bool call_val(Val callee, int argc) {
     }
     run_err("Can only call functions and classes");
     return false;
+}
+
+static ObjUpvalue* capture_upvalue(Val* local) {
+    ObjUpvalue* upvalue = create_upvalue(local);
+    return upvalue;
 }
 
 static IntrResult run() {
@@ -192,7 +198,7 @@ static IntrResult run() {
         printf("]");
     }
     printf("\n");
-    disas_op_at(&frame->fn->ops, (int)(frame->pc - frame->fn->ops.ops));
+    disas_op_at(&frame->closure->fn->ops, (int)(frame->pc - frame->closure->fn->ops.ops));
 #endif
         switch(op = CONSUME_OP()) {
             case OP_CONST:
@@ -300,6 +306,16 @@ static IntrResult run() {
                 frame->slots[slot] = peek_val(0);
                 break;
             }
+            case OP_GET_UPVALUE: {
+                uint8_t slot = CONSUME_OP();
+                push_val(*frame->closure->upvalues[slot]->slot);
+                break;
+            }
+            case OP_SET_UPVALUE: {
+                uint8_t slot = CONSUME_OP();
+                *frame->closure->upvalues[slot]->slot = peek_val(0);
+                break;
+            }
             case OP_JMP_IF_FALSE: {
                 uint16_t offset = CONSUME_OP16();
                 if (is_falsey(peek_val(0))) {
@@ -325,6 +341,23 @@ static IntrResult run() {
                 frame = &vm.frames[vm.frame_count - 1];
                 break;
             }
+            case OP_CLOSURE: {
+                ObjFunc* fn = UNWRAP_FUNC(CONSUME_CONST());
+                ObjClosure* closure = create_closure(fn);
+                push_val(MK_OBJ_VAL((Obj*)closure));
+
+                // capture the expected upvalues
+                for (int i = 0; i < fn->upvalue_count; i++) {
+                    uint8_t is_local = CONSUME_OP();
+                    uint8_t index = CONSUME_OP();
+                    if (is_local) {
+                        closure->upvalues[i] = capture_upvalue(frame->slots + index); 
+                    } else {
+                        closure->upvalues[i] = frame->closure->upvalues[index];
+                    }
+                }
+                break;
+            }
             default:
                 keep_going = false;
                 break;
@@ -340,7 +373,10 @@ IntrResult interpret(char* program) {
     }
 
     push_val(MK_OBJ_VAL((Obj*)fn));
-    call(fn, 0); // call implicit "main"
+    ObjClosure* closure = create_closure(fn);
+    pop_val();
+    push_val(MK_OBJ_VAL((Obj*)closure));
+    call(closure, 0); // call implicit "main"
 
     return run();
 }

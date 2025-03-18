@@ -43,6 +43,14 @@ static int disas_jmp(const char* name, int pos, Ops* ops) {
     return pos + 3;
 }
 
+static void print_fn(ObjFunc* fn) {
+    if (fn->name == NULL) {
+        printf("<script>");
+    } else {
+        printf("<fn %s>", fn->name->chars);
+    }
+}
+
 void print_obj(Val val) {
     switch(OBJ_TYPE(val)) {
         case OBJ_STR: {
@@ -52,15 +60,20 @@ void print_obj(Val val) {
         }
         case OBJ_FUNC: {
             ObjFunc* fn = UNWRAP_FUNC(val);
-            if (fn->name == NULL) {
-                printf("<script>");
-            } else {
-                printf("<fn %s>", fn->name->chars);
-            }
+            print_fn(fn);
             break;
         }
         case OBJ_NATIVE: {
             printf("<native fn>");
+            break;
+        }
+        case OBJ_CLOSURE: {
+            ObjClosure* closure = UNWRAP_CLOSURE(val);
+            print_fn(closure->fn);
+            break;
+        }
+        case OBJ_UPVALUE: {
+            printf("upvalue");
             break;
         }
         default:
@@ -81,6 +94,24 @@ void print_val(Val val) {
     } else {
         printf("<unknown val>");
     }
+}
+
+static int disas_closure(Ops* ops, int pos) {
+    pos++;
+    uint8_t constant = ops->ops[pos++];
+    printf("%-16s %4d ", "OP_CLOSURE", constant);
+    print_val(ops->constants.vals[constant]);
+    printf("\n");
+
+    ObjFunc* fn = UNWRAP_FUNC(ops->constants.vals[constant]);
+    for (int j = 0; j < fn->upvalue_count; j++) {
+        int is_local = ops->ops[pos++];
+        int index = ops->ops[pos++];
+        printf("%04d      |                     %s %d\n",
+                pos - 2, is_local ? "local" : "upvalue", index);
+    }
+
+    return pos;
 }
 
 int disas_op_at(Ops* ops, int pos) {
@@ -164,6 +195,9 @@ int disas_op_at(Ops* ops, int pos) {
             break;
         case OP_CALL:
             next_pos = disas_simple("OP_CALL", pos);
+            break;
+        case OP_CLOSURE:
+            next_pos = disas_closure(ops, pos);
             break;
         default:
             printf("Unknown op code %d\n", op);

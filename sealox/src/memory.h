@@ -26,5 +26,7 @@ void free_objects();
 
 ObjFunc* create_func();
 ObjNative* create_native_func(NativeFn fn);
+ObjClosure* create_closure(ObjFunc* fn);
+ObjUpvalue* create_upvalue(Val* slot);
 
 #endif

@@ -10,7 +10,7 @@
 #define STACK_SIZE (MAX_FRAMES * UINT8_COUNT)
 
 typedef struct {
-    ObjFunc* fn;
+    ObjClosure* closure;
     uint8_t* pc;
     Val* slots;
 } CallFrame;
