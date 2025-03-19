@@ -75,17 +75,30 @@ static void test_two_put_get(ObjStr* key, Val val, ObjStr* other_key, Val other_
     dict_init(&dict);
 
     dict_put(&dict, key, val);
-    dict_put(&dict, other_key, other_val);
-
     Val result;
     bool exists = dict_get(&dict, key, &result);
+
+    ASSERT(exists, "Expected first added entry to be found");
+    ASSERT(UNWRAP_NUM(val) == UNWRAP_NUM(result), "Expected first retrieved value to match inserted value");
+
+    dict_put(&dict, other_key, other_val);
     Val other_result;
     bool other_exists = dict_get(&dict, other_key, &other_result);
 
-    ASSERT(exists, "Expected first added entry to be found");
-    ASSERT(exists, "Expected second added entry to be found");
-    ASSERT(UNWRAP_NUM(val) == UNWRAP_NUM(result), "Expected first retrieved value to match inserted value");
+    ASSERT(other_exists, "Expected second added entry to be found");
     ASSERT(UNWRAP_NUM(other_val) == UNWRAP_NUM(other_result), "Expected second retrieved value to match inserted value");
+}
+
+void test_dict_should_update_if_put_with_same_key() {
+    BEGIN_TEST();
+
+    Val val = MK_NUM_VAL(1234);
+    ObjStr* key = alloc_str_no_gc("key", 3);
+    Val other_val = MK_NUM_VAL(4321);
+
+    test_two_put_get(key, val, key, other_val);
+
+    END_TEST();
 }
 
 void test_dict_should_put_and_get_multiple_distinct() {
@@ -142,6 +155,7 @@ void run_all_test_dict() {
     test_dict_should_not_get_from_empty();
     test_dict_should_put_and_get_single();
     test_dict_should_not_find_after_delete();
+    test_dict_should_update_if_put_with_same_key();
     test_dict_should_put_and_get_multiple_distinct();
     test_dict_should_put_and_get_multiple_conflicting();
     test_dict_should_get_str();

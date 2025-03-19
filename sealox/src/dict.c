@@ -3,7 +3,7 @@
 #include "memory.h"
 
 // null key and not tombstone
-#define IS_EMPTY_SLOT(target) target->key == NULL && !IS_BOOL(target->val)
+#define IS_EMPTY_SLOT(target) (target->key == NULL && !IS_BOOL(target->val))
 
 DictEntry* dict_find_entry(Dict* dict, ObjStr* key) {
     int cap = dict->capacity;
@@ -32,13 +32,13 @@ DictEntry* dict_find_entry(Dict* dict, ObjStr* key) {
     return NULL;
 }
 
-DictEntry* dict_find_empty_slot(Dict* dict, ObjStr* key) {
+DictEntry* dict_find_insertion_slot(Dict* dict, ObjStr* key) {
     int cap = dict->capacity;
     int i_target = (key->hash) % cap;
     for (int i = 0; i < cap; i++) {
         DictEntry* target = &dict->entries[i_target];
 
-        if (IS_EMPTY_SLOT(target)) {
+        if (target->key == key || IS_EMPTY_SLOT(target)) {
             return target;
         }
 
@@ -100,7 +100,7 @@ bool dict_put(Dict* dict, ObjStr* key, Val val) {
         dict_grow(dict);
     }
 
-    DictEntry* match = dict_find_empty_slot(dict, key);
+    DictEntry* match = dict_find_insertion_slot(dict, key);
     if (match == NULL) {
         return false;
     }
